@@ -20,6 +20,11 @@ class Puzzle:
         self.board = []             # array of boards
         self.CurrentBoard = puzzle.copy()  # simple array representation of the board
 
+        #self.branch = {
+        #
+        #}
+
+
         self.board.append([])       # add first primary board
 
         for i in range(0,9):
@@ -110,7 +115,7 @@ class Puzzle:
         print("="*20)
 
 
-    def Solved(self):
+    def isSolved(self):
         res = False
         for i in range(0, 9):
             for j in range (0,9):
@@ -120,8 +125,30 @@ class Puzzle:
                     res = True
         return res
 
+    def Solve(self):
+        solved = False
+        self.move = 0
+
+        while (not solved):
+            myPuz.Show()
+            solved = myPuz.isSolved()                       # is is solved yet?
+            saved = myPuz.getCurrentBoard()                 # save arrays of the current board
+            current = myPuz.SetAllSinglePossibilities()     # set all singular possibilities and save array again
+
+            if (current == saved) and (not solved):         # if nothing changes and still unsolved
+                print("Ran out of options SinglePossibility options")
+                # use additional algorithm
+                break
+
+            if self.move > 1000:  # safety pin
+                break
+            else:
+                self.move += 1
+        return solved
+
+
 # main module
-'''
+
 my_puzzle = [[7, 0, 5, 2, 0, 0, 0, 0, 4],
              [0, 8, 0, 0, 0, 0, 7, 0, 0],
              [0, 0, 0, 0, 0, 3, 2, 9, 0],
@@ -142,36 +169,20 @@ my_puzzle = [[1, 0, 4, 0, 0, 8, 0, 0, 6],
              [0, 0, 0, 0, 3, 0, 0, 0, 0],
              [4, 0, 0, 6, 0, 0, 1, 0, 7]]
 
+'''
 
 myPuz = Puzzle(my_puzzle)
 
 start_time = time.time()
 
-solved = False
-i = 0
-
-while (not solved):
-    myPuz.Show()
-    solved = myPuz.Solved()
-    saved = myPuz.getCurrentBoard()
-    current = myPuz.SetAllSinglePossibilities()
-
-    if current == saved:
-        print("Ran out of options SinglePossibility options")
-        break
-
-    if i>1000:  # safety pin
-        break
-    else:
-        i += 1
+solved = myPuz.Solve()
 
 if (solved):
-    print("Sudoku is solved in %s seconds, %s board iteration and %s placements" % (round(time.time() - start_time,2), i, myPuz.move))
+    print("Sudoku is solved in %s seconds,  and %s placements" % (round(time.time() - start_time,2), myPuz.move))
 else:
     print("Sudoku is still UNSOLVED  in %s seconds, %s board iteration and %s placements" % (round(time.time() - start_time,2), i, myPuz.move))
 
 print("The End.")
 
 # currently solves simple puzzles
-
 # need to explore more options
