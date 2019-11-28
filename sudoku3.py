@@ -14,23 +14,16 @@ class Cell:
 class Puzzle:
 
     def __init__(self, puzzle):
-        self.move = 0
         self.index = 0
         self.bookmark = 0
-        self.board = []             # array of boards
-        self.CurrentBoard = puzzle.copy()  # simple array representation of the board
-
-        #self.branch = {
-        #
-        #}
-
-
-        self.board.append([])       # add first primary board
+        self.board = []                     # array of boards
+        self.CurrentBoard = puzzle.copy()   # simple array representation of the board
+        self.board.append([])               # add first primary board
+        self.moves = []
 
         for i in range(0,9):
-            self.board[self.index].append([])   # cN    eate new row
+            self.board[self.index].append([])   # create new row
             for j in range (0,9):
-                # self.board[i].append(puzzle[i][j]) # add column
                 self.board[self.index][i].append(Cell(i,j,puzzle[i][j]))
                 self.board[self.index][i][j].solved = puzzle[i][j] != 0
         self.setAllSpecials()
@@ -98,9 +91,15 @@ class Puzzle:
         for i in range(0, 9):
             for j in range (0,9):
                 if ( (not self.board[self.index][i][j].solved)) and (len(self.board[self.index][i][j].possibilities) == 1):
-                    self.board[self.index][i][j].value =  self.board[self.index][i][j].possibilities[0]  # set the only possibility as a value
-                    self.CurrentBoard[i][j] = self.board[self.index][i][j].value # maintain simple board copy
-                    self.move += 1
+
+                    old_Value = self.board[self.index][i][j].value
+                    new_Value = self.board[self.index][i][j].possibilities[0]
+
+                    self.moves.append({"row":i, "col":j, "value_before":old_Value, "value_after": new_Value })
+
+                    self.board[self.index][i][j].value =  new_Value  # set the only possibility as a value
+                    self.CurrentBoard[i][j] = new_Value # maintain simple board copy
+
                     self.board[self.index][i][j].solved = True
                     self.setAllSpecials()  # recalculate all exceptions and possibilities
                     #count.append((i,j))
@@ -127,7 +126,6 @@ class Puzzle:
 
     def Solve(self):
         solved = False
-        self.move = 0
 
         while (not solved):
             myPuz.Show()
@@ -140,15 +138,16 @@ class Puzzle:
                 # use additional algorithm
                 break
 
-            if self.move > 1000:  # safety pin
+            if len(self.moves) > 500:  # safety pin
+                print("Safety pin triggered. Too many moves")
                 break
-            else:
-                self.move += 1
+
         return solved
 
 
 # main module
 
+# simple one
 my_puzzle = [[7, 0, 5, 2, 0, 0, 0, 0, 4],
              [0, 8, 0, 0, 0, 0, 7, 0, 0],
              [0, 0, 0, 0, 0, 3, 2, 9, 0],
@@ -159,6 +158,7 @@ my_puzzle = [[7, 0, 5, 2, 0, 0, 0, 0, 4],
              [0, 0, 1, 0, 0, 0, 0, 8, 0],
              [5, 0, 0, 0, 0, 8, 1, 0, 9]]
 '''
+# complex
 my_puzzle = [[1, 0, 4, 0, 0, 8, 0, 0, 6],
              [0, 0, 0, 0, 1, 0, 0, 0, 0],
              [0, 0, 0, 0, 6, 9, 0, 1, 0],
@@ -171,16 +171,15 @@ my_puzzle = [[1, 0, 4, 0, 0, 8, 0, 0, 6],
 
 '''
 
-myPuz = Puzzle(my_puzzle)
-
-start_time = time.time()
-
-solved = myPuz.Solve()
+myPuz = Puzzle(my_puzzle)                       # create puzzle
+time_start = time.time()                        # get current time
+solved = myPuz.Solve()                          # solve puzzle
+time_dlt = round(time.time() - time_start,2)    # get time difference
 
 if (solved):
-    print("Sudoku is solved in %s seconds,  and %s placements" % (round(time.time() - start_time,2), myPuz.move))
+    print("Sudoku is solved in %s seconds,  and %s placements" % (time_dlt , len(myPuz.moves)))
 else:
-    print("Sudoku is still UNSOLVED  in %s seconds, %s board iteration and %s placements" % (round(time.time() - start_time,2), i, myPuz.move))
+    print("Sudoku is still UNRESOLVED in %s seconds,  and %s placements" % (time_dlt , len(myPuz.moves)))
 
 print("The End.")
 
