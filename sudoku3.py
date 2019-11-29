@@ -106,7 +106,7 @@ class Puzzle:
         for i in range(0, 9):
             for j in range (0,9):
                 if not self.board[self.index][i][j].solved:
-                    tpl = tuple(self.board[self.index][i][j].possibilities)     # get list of current possibilities
+                    tpl = tuple(sorted(self.board[self.index][i][j].possibilities))     # get list of current possibilities
                     if tpl not in self.twinList.keys():                         # if does not exist
                         self.twinList[tpl] = []                                 # create one
                     self.twinList[tpl].append((i,j))                            # add (row,col) tuple to the list
