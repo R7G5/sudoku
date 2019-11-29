@@ -110,6 +110,9 @@ class Puzzle:
                     if tpl not in self.twinList.keys():                         # if does not exist
                         self.twinList[tpl] = []                                 # create one
                     self.twinList[tpl].append((i,j))                            # add (row,col) tuple to the list
+
+        self.twinList = dict(filter(lambda item: len(item[1]) > 1, self.twinList.items()))  # only keep items with two or more cell coordinates
+        self.twinList = sorted(self.twinList.items(), key=lambda item: len(item[0]))        # sort by length of possibility list
     #return ?
 
     def SetAllSinglePossibilities(self):
@@ -212,15 +215,15 @@ else:
 print("The End.")
 
 # ToDo:
-#   [ ] Create twinList - list of identical possibilities for the board
-#   [ ] Collect list of cells with identical possibility list information in the same row or column
-#       [ ]
-#       [ ] if yes,
-#           [ ] for each number in possibility list
-#               [ ] copy puzzle with only that possibility number and try to solve it
-#           [ ] if still not solved
-#               [ ] return possibilities back to the list of available possibilities
-#               [ ] try next
+#   [X] Create twinList - list of identical possibilities for the board
+#   [X] fix issue: remove twinList items where list of coordinates in the value is shorter than 2 items
+#   [ ] Sort twinList dictionary by the length of the key
+#   -
+#   [ ] for each number (N) in possibility dictionary key (twinList)
+#       [ ] for each coordinate set (R,C) in the current possibility dictionary key.value
+#           [ ] copy puzzle, and set cell (R,C) to N
+#           [ ] try to .Solve puzzle
+
 #
 # currently solves simple puzzles
 # need to explore more options
