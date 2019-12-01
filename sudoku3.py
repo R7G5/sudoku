@@ -162,13 +162,13 @@ class Puzzle:
             current = self.SetAllSinglePossibilities()     # set all singular possibilities and save array again
 
             if (current == saved) and (not solved):         # if nothing changes and still unsolved
-                print("Ran out of options SinglePossibility options")
+                print("Ran out of options single possibility options")
                 # use additional algorithm
                 break
 
-            if len(self.moves) > 500:  # safety pin
-                print("Safety pin triggered. Too many moves")
-                break
+            #if len(self.moves) > 1000:  # safety pin
+            #    print("Safety pin triggered. Too many moves")
+            #    break
 
         return solved, self.moves
 
@@ -193,11 +193,17 @@ class SudokuGame:
             self.puzzle[i].setTwinList()
 
             for key, value in self.puzzle[i].twinList:   # iterate key (possible numbers) and values cell coordinates
-                for possibility in key:
-                    # current possible number
-                    for row, col in value:
-                        pass
-                        # current set of coordinates
+                for possibility in key:                  # iterate through all possible numbers in the key
+                    for row, col in value:               # iterate through all coordinates in value
+
+                        cur_board = copy.deepcopy(self.puzzle[i].CurrentBoard)      # make array copy of existing board
+                        cur_board[row][col] = possibility                           # replace cell with possibility
+                        tmp_puzzle = Puzzle(cur_board)                              # create new Puzzle object
+                        tmp_puzzle.Solve()                                          # try to solve it
+                        if tmp_puzzle.isSolved():                                   # if solved: exit
+                            self.puzzle[i].moves += tmp_puzzle.moves
+                            print("Line 205: Puzzle solved!!!")
+                            return True
 
         return self.solved
 
@@ -226,7 +232,8 @@ for k,v in mydict.items():
     |--- row: 3  col: 0
  |- 8
     |--- row: 1  col: 4
-    |--- row: 3  col: 0'''
+    |--- row: 3  col: 0
+''' # example
 
 
 # main module
@@ -242,8 +249,8 @@ my_puzzle = [[7, 0, 5, 2, 0, 0, 0, 0, 4],
              [0, 4, 8, 9, 0, 0, 0, 0, 0],
              [0, 0, 1, 0, 0, 0, 0, 8, 0],
              [5, 0, 0, 0, 0, 8, 1, 0, 9]]
-'''
-# complex
+
+# complex1
 my_puzzle = [[1, 0, 4, 0, 0, 8, 0, 0, 6],
              [0, 0, 0, 0, 1, 0, 0, 0, 0],
              [0, 0, 0, 0, 6, 9, 0, 1, 0],
@@ -254,6 +261,31 @@ my_puzzle = [[1, 0, 4, 0, 0, 8, 0, 0, 6],
              [0, 0, 0, 0, 3, 0, 0, 0, 0],
              [4, 0, 0, 6, 0, 0, 1, 0, 7]]
 
+
+# CLEAN FIELD
+my_puzzle = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 0]]
+
+'''
+# complex
+my_puzzle = [[8, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 3, 6, 0, 0, 0, 0, 0],
+             [0, 7, 0, 0, 9, 0, 2, 0, 0],
+             [0, 5, 0, 0, 0, 7, 0, 0, 0],
+             [0, 0, 0, 0, 4, 5, 7, 0, 0],
+             [0, 0, 0, 1, 0, 0, 0, 3, 0],
+             [0, 0, 1, 0, 0, 0, 0, 6, 8],
+             [0, 0, 8, 5, 0, 0, 0, 1, 0],
+             [0, 9, 0, 0, 0, 0, 4, 0, 0]]
+
+# 1. The World's Hardest Sudoku
 
 
 myPuz = SudokuGame(my_puzzle)           # create puzzle
