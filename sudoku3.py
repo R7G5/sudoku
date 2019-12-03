@@ -337,6 +337,9 @@ else:
 print("The End.")
 
 # ToDo:
+#   Sudoku Alorythms 
+#   https://www.sudokudragon.com/sudokustrategy.htm
+#
 #   [X] Create twinList - list of identical possibilities for the board
 #   [X] fix issue: remove twinList items where list of coordinates in the value is shorter than 2 items
 #   [X] Sort twinList dictionary by the length of the key - shortest number of possibilities
