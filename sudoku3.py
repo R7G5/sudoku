@@ -110,36 +110,39 @@ class Puzzle:
                     self.twinList[tpl].append((i,j))                            # add (row,col) tuple to the list
 
         self.twinList = dict(filter(lambda item: len(item[1]) > 1, self.twinList.items()))  # only keep items with two or more cell coordinates
-        self.twinList = sorted(self.twinList.items(), key=lambda item: len(item[0]))        # sort by length of possibility list
+        self.twinList = sorted(self.twinList.items(), key=lambda item: len(item[0]))         # sort by length of possibility list
     #return ?
 
-    def SetAllSinglePossibilities(self):
+    def SetAllSinglePossibilities(self):    # sets all cells with the only possible number to that number
 
         for i in range(0, 9):
             for j in range (0,9):
-                if ( (not self.board[i][j].solved)) and (len(self.board[i][j].possibilities) == 1):
+                if ((not self.board[i][j].solved)) and (len(self.board[i][j].possibilities) == 1): # if cell has only one possible number
 
-                    old_Value = self.board[i][j].value
-                    new_Value = self.board[i][j].possibilities[0]
+                    old_Value = self.board[i][j].value              # save previous cell value
+                    new_Value = self.board[i][j].possibilities[0]   # set to single possible number
 
-                    self.moves.append({"row":i, "col":j, "value_before":old_Value, "value_after": new_Value })
+                    self.moves.append({"row":i, "col":j, "value_before":old_Value, "value_after": new_Value }) # append move to the moves list
+                    print("Row:%s  Col:%s  Before:%s  After:%s" % (i, j, old_Value, new_Value))
 
                     self.board[i][j].value =  new_Value     # set the only possibility as a value
                     self.board[i][j].solved = True          # mark cell solved
-                    self.CurrentBoard[i][j] = new_Value                 # maintain simple board copy
+                    self.CurrentBoard[i][j] = new_Value     # maintain array copy of the board
 
-                    self.board[i][j].solved = True
-                    self.setAllSpecials()  # recalculate all exceptions and possibilities
+                    self.board[i][j].solved = True          # set board solved attribute True
+                    self.setAllSpecials()                   # recalculate all exceptions and possibilities
 
-        tmp = copy.deepcopy(self.CurrentBoard)
+        tmp = copy.deepcopy(self.CurrentBoard)              # return array
         return tmp
 
-    def Show(self):
+    def Show(self,message=''):
+        print("B:","=" * 20)
+        print("message: %s" % (message))
         for i in range(0, 9):
             for j in range (0,9):
                 print(self.board[i][j].value, end = " "),
             print("")
-        print("="*20)
+        print("E","="*20)
 
 
     def isSolved(self):
@@ -156,15 +159,16 @@ class Puzzle:
         solved = False
 
         while (not solved):
-            self.Show()
-            solved = self.isSolved()                       # is is solved yet?
+            solved = self.isSolved()                       # is it solved yet?
             saved = self.getCurrentBoard()                 # save arrays of the current board
             current = self.SetAllSinglePossibilities()     # set all singular possibilities and save array again
 
             if (current == saved) and (not solved):         # if nothing changes and still unsolved
-                print("Ran out of options single possibility options")
+                self.Show("Ran out of options single possibility options")
                 # use additional algorithm
                 break
+
+
 
             #if len(self.moves) > 1000:  # safety pin
             #    print("Safety pin triggered. Too many moves")
@@ -178,32 +182,40 @@ class SudokuGame:
         self.index = 0
         self.solved = False
         self.moves = []
-        self.puzzle = []
-        self.puzzle.append([])
-        self.puzzle[self.index] = Puzzle(init_puzzle)
+        #self.puzzle = []
+        #self.puzzle.append([])
+        #self.puzzle[self.index] = Puzzle(init_puzzle)
+        self.puzzle = Puzzle(init_puzzle)
 
     def Solve(self):
         i = self.index
 
         #for i in range(0, len(self.puzzle[i])):
 
-        self.solved, self.moves = self.puzzle[i].Solve()         # solve using simple method
+        print("Starting to solve using simple method")
+        self.solved, self.moves = self.puzzle.Solve()         # solve using simple method
+        print("Finished to solve using simple method")
 
-        while not self.puzzle[i].isSolved():   # or self.puzzle[i].solved
-            self.puzzle[i].setTwinList()
+        while not self.puzzle.isSolved():   # or self.puzzle[i].solved
+            self.puzzle.setTwinList()
 
-            for key, value in self.puzzle[i].twinList:   # iterate key (possible numbers) and values cell coordinates
+            for key, value in self.puzzle.twinList:   # iterate key (possible numbers) and values cell coordinates
                 for possibility in key:                  # iterate through all possible numbers in the key
+                    print("==>Exporing Possibility: %s" % (possibility))
                     for row, col in value:               # iterate through all coordinates in value
 
-                        cur_board = copy.deepcopy(self.puzzle[i].CurrentBoard)      # make array copy of existing board
-                        cur_board[row][col] = possibility                           # replace cell with possibility
-                        tmp_puzzle = Puzzle(cur_board)                              # create new Puzzle object
-                        tmp_puzzle.Solve()                                          # try to solve it
-                        if tmp_puzzle.isSolved():                                   # if solved: exit
-                            self.puzzle[i].moves += tmp_puzzle.moves
-                            print("Line 205: Puzzle solved!!!")
-                            return True
+                        print("Possible # = %s   Coord:(%s,%s)" % (possibility, row, col))
+
+                        cur_board = copy.deepcopy(self.puzzle.CurrentBoard)   # make array copy of existing board
+                        cur_board[row][col] = possibility                     # replace cell with possibility
+                        tmp_game = SudokuGame(cur_board)                      # create new SudokuGame object
+                        tmp_game.Solve()                                      # try to solve it
+
+                        if tmp_game.solved:                                   # if solved: exit
+                            self.puzzle.moves += tmp_game.puzzle.moves
+                            print("Line 206: Puzzle solved!!!")
+                            self.solved = True
+                            return self.solved
 
         return self.solved
 
@@ -273,8 +285,19 @@ my_puzzle = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
-'''
-# complex
+# from https://dev.to/willamesoares/what-i-learned-from-implementing-a-sudoku-solver-in-python-3a3g
+my_puzzle = [[0, 0, 0, 2, 6, 0, 7, 0, 1],
+             [6, 8, 0, 0, 7, 0, 0, 9, 0],
+             [1, 9, 0, 0, 0, 4, 5, 0, 0],
+             [8, 2, 0, 1, 0, 0, 0, 4, 0],
+             [0, 0, 4, 6, 0, 2, 9, 0, 0],
+             [0, 5, 0, 0, 0, 3, 0, 2, 8],
+             [0, 0, 9, 3, 0, 0, 0, 7, 4],
+             [0, 4, 0, 0, 5, 0, 0, 3, 6],
+             [7, 0, 3, 0, 1, 8, 0, 0, 0]]
+
+
+# 1. The World's Hardest Sudoku
 my_puzzle = [[8, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 0, 3, 6, 0, 0, 0, 0, 0],
              [0, 7, 0, 0, 9, 0, 2, 0, 0],
@@ -284,8 +307,18 @@ my_puzzle = [[8, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 0, 1, 0, 0, 0, 0, 6, 8],
              [0, 0, 8, 5, 0, 0, 0, 1, 0],
              [0, 9, 0, 0, 0, 0, 4, 0, 0]]
+'''
 
-# 1. The World's Hardest Sudoku
+my_puzzle = [[1, 0, 0, 5, 0, 0, 7, 0, 3],
+             [0, 0, 0, 0, 3, 0, 0, 0, 0],
+             [0, 3, 0, 8, 1, 0, 0, 0, 0],
+             [0, 0, 6, 0, 4, 8, 5, 0, 1],
+             [2, 7, 0, 0, 0, 0, 0, 9, 4],
+             [5, 0, 8, 2, 7, 0, 3, 0, 0],
+             [0, 0, 0, 0, 9, 5, 0, 4, 0],
+             [0, 0, 0, 0, 2, 0, 0, 0, 0],
+             [6, 0, 3, 0, 0, 1, 0, 0, 7]]
+
 
 
 myPuz = SudokuGame(my_puzzle)           # create puzzle
