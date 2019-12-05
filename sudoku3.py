@@ -1,15 +1,29 @@
 import time
 import copy
+import sys
 
 class Cell:
 
     def __init__(self, row, col, value=0):
         self.value  = value                 # current value
         self.solved = False                 # this cell is solved
-        self.row = row                      # cell row position
-        self.col = col                      # cell column position
+        #ToDo Not Committed: Removed cell.row & col
+        #self.row = row                      # cell row position
+        #self.col = col                      # cell column position
         self.exceptions = []                # list of values not allowed in cell due to position
         self.candidates = []                # list of possible values
+
+    def set(self,value):
+        if self.value in self.candidates:
+            self.value = value                                      # set value
+            self.exceptions = list(set(self.exceptions).add(value)) # add to exceptions
+            self.candidates = list(set(self.candidates) - {value})  # remove from candidates
+        else:
+            print("Error: stying to assign value (%s) that is not in the candidate list" % (value))
+            sys.exit(1)
+
+    def get(self):
+        return self.value
 
 class Grid:
 
