@@ -4,10 +4,11 @@ import sys
 
 class Cell:
 
-    def __init__(self, row, col, value=0):
+    #ToDo Not Committed: Removed row,col from def __init__(self, row, col, value=0):
+    def __init__(self, value=0):
         self.value  = value                 # current value
         self.solved = False                 # this cell is solved
-        #ToDo Not Committed: Removed cell.row & col
+        #ToDo Not Committed: Removed cell.row & col attributes
         #self.row = row                      # cell row position
         #self.col = col                      # cell column position
         self.exceptions = []                # list of values not allowed in cell due to position
@@ -28,10 +29,9 @@ class Cell:
 class Grid:
 
     def __init__(self, puzzle):
-        self.bookmark = 0
-        self.board = []                     # array of boards
-        self.CurrentBoard = puzzle.copy()   # simple array representation of the board
-        self.moves = []
+        self.board = []                             # array of boards
+        self.CurrentBoard = copy.deepcopy(puzzle)   # simple array representation of the board
+        self.moves = []                             # list of moves
         self.twinList = {}                  # list of identical possibilities per row or col.
                                             # key = tuple of possible numbers
                                             # value = list of touple coordinates
@@ -45,10 +45,10 @@ class Grid:
         '''
 
         for i in range(0,9):
-            self.board.append([])   # create new row
+            self.board.append([])                               # create new row
             for j in range (0,9):
-                self.board[i].append(Cell(i,j,puzzle[i][j]))        # copy the value to the cell
-                self.board[i][j].solved = puzzle[i][j] != 0         # Marked solved if not 0
+                self.board[i].append(Cell(puzzle[i][j]))        # copy the value to the cell
+                self.board[i][j].solved = puzzle[i][j] != 0     # Marked solved if not 0
         self.RecalculateAllCandidates()
 
     def getCurrentBoard(self):  # returns an array copy of the grid
