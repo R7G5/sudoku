@@ -37,17 +37,17 @@ class Grid:
                 self.board[i][j].solved = puzzle[i][j] != 0         # Marked solved if not 0
         self.RecalculateAllCandidates()
 
-    def getCurrentBoard(self):
+    def getCurrentBoard(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
         return tmp
 
-    def getCol(self, col):
+    def getCol(self, col):      # returns list of values from the Col where provided cell resides
         tmp = []
         for i in range(0, 9):
             tmp.append(self.board[i][col].value)
         return tmp
 
-    def getRow(self, row):
+    def getRow(self, row):      # returns list of values from the Row where provided cell resides
         tmp = []
         for j in range(0, 9):
             tmp.append(self.board[row][j].value)
@@ -55,8 +55,7 @@ class Grid:
 
     def getBox(self, row, col): # returns list of values from the Box where provided cell resides
 
-        b_row = 0
-        b_col = 0
+        b_row, b_col = 0, 0
 
         if row in range(0, 3):
             b_row = 0
@@ -80,23 +79,83 @@ class Grid:
 
     def getExceptions(self, row, col):
         tmp = []
-        tmp = set(self.getBox(row, col) + self.getCol(col) + self.getRow(row))    # create unique list of possibilities
+        tmp = set(self.getBox(row, col) + self.getCol(col) + self.getRow(row))    # create unique list of candidates
         tmp = [elem for elem in tmp if elem != 0]                                 # remove all zeros
         return tmp
 
     def getCandidates(self, row, col):
         allNumbers =  [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        exceptionList = self.getExceptions(row, col)
-        return list(set(allNumbers) - set(exceptionList))   # list of numbers not in exception list
+        #exceptionList = self.getExceptions(row, col)
+        self.board[row][col].exceptions = self.getExceptions(row, col)        # set exception field
+        return list(set(allNumbers) - set(self.board[row][col].exceptions))   # list of numbers not in exception list
 
     def RecalculateAllCandidates(self):
         for i in range(0, 9):
             for j in range (0,9):
                 if not self.board[i][j].solved:
-                    self.board[i][j].exceptions = self.getExceptions(i, j)
+                    #self.board[i][j].exceptions = self.getExceptions(i, j)
                     self.board[i][j].candidates = self.getCandidates(i, j)
 
 
+    def RowHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Row
+        HiddenSingle = 0
+        for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
+            for otherCol in list({0, 1, 2, 3, 4, 5, 6, 7, 8} - {col}):  # iterate through each column except specified
+
+                if candidate in self.board[row][otherCol].candidates:   # if current candidate of provided cell is in the list of candidates of another cell
+                    HiddenSingle = 0                                    # set to 0 to reset is was previously saved
+                    continue                                            # get next candidate
+                else:
+                    HiddenSingle = candidate                            # save candidate of the current cell
+        return HiddenSingle
+
+
+    def ColHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Cow
+        HiddenSingle = 0
+        for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
+            for otherRow in list({0, 1, 2, 3, 4, 5, 6, 7, 8} - {row}):  # iterate through each column except specified
+
+                if candidate in self.board[otherRow][col].candidates:   # if current candidate of provided cell is in the list of candidates of another cell
+                    HiddenSingle = 0                                    # set to 0 to reset is was previously saved
+                    continue                                            # get next candidate
+                else:
+                    HiddenSingle = candidate                            # save candidate of the current cell
+        return HiddenSingle
+
+
+    def BoxHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Box
+
+        b_row, b_col = 0, 0
+
+        if row in range(0, 3):                                          # set box row
+            b_row = 0
+        elif row in range(3, 6):
+            b_row = 3
+        elif row in range(6, 9):
+            b_row = 6
+
+        if col in range(0, 3):                                          # set box column
+            b_col = 0
+        elif col in range(3, 6):
+            b_col = 3
+        elif col in range(6, 9):
+            b_col = 6
+
+        HiddenSingle = 0
+
+        for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
+            for i in list(set(range(b_row, b_row + 3)) - {row}):        # iterate each row except specified
+                for j in list(set(range(b_col, b_col + 3)) - {col}):    # iterate each col except specified
+
+                    if candidate in self.board[i][j].candidates:        # if current candidate of provided cell is in the list of candidates of another cell
+                        HiddenSingle = 0                                # set to 0 to reset is was previously saved
+                        continue                                        # get next candidate
+                    else:
+                        HiddenSingle = candidate                        # save candidate of the current cell
+
+        return HiddenSingle
+
+    '''
     # Populates attribute twinList with identical possibiities
     def setTwinList(self):
         self.twinList = {}  # clear existing data
@@ -112,6 +171,7 @@ class Grid:
         self.twinList = dict(filter(lambda item: len(item[1]) > 1, self.twinList.items()))  # only keep items with two or more cell coordinates
         self.twinList = sorted(self.twinList.items(), key=lambda item: len(item[0]))         # sort by length of possibility list
     #return ?
+    '''
 
     def SetAllSingleCandidates(self):    # sets all cells with the only possible number to that number
                                          # Covered methods: Full House; Naked Single
@@ -120,7 +180,7 @@ class Grid:
             for j in range (0,9):
                 if ((not self.board[i][j].solved)) and (len(self.board[i][j].candidates) == 1): # if cell has only one possible number
 
-                    old_Value = self.board[i][j].value              # save previous cell value
+                    old_Value = self.board[i][j].value           # save previous cell value
                     new_Value = self.board[i][j].candidates[0]   # set to single possible number
 
                     self.moves.append({"row":i, "col":j, "value_before":old_Value, "value_after": new_Value }) # append move to the moves list
@@ -160,14 +220,17 @@ class Grid:
         solved = False
 
         while (not solved):
-            solved = self.isSolved()                       # is it solved yet?
-            saved = self.getCurrentBoard()                 # save arrays of the current board
-            current = self.SetAllSingleCandidates()     # set all singular possibilities and save array again
+            solved = self.isSolved()                        # is it solved yet?
+            saved = self.getCurrentBoard()                  # save arrays of the current board
+            current = self.SetAllSingleCandidates()         # set all single candidates and save array again
 
             if (current == saved) and (not solved):         # if nothing changes and still unsolved
                 self.Show("Warning: Ran out of options single possibility options!")
+
+
                 # use additional algorithm
                 break
+
 
         return solved, self.moves
 
@@ -177,19 +240,14 @@ class SudokuGame:
         self.index = 0
         self.solved = False
         self.moves = []
-        #self.grid = []
-        #self.grid.append([])
-        #self.grid[self.index] = Grid(init_puzzle)
         self.grid = Grid(init_puzzle)
 
     def Solve(self):
         i = self.index
 
-        #for i in range(0, len(self.grid[i])):
-
-        print("Starting to solve using simple method")
+        print(">>> Starting...")
         self.solved, self.moves = self.grid.Solve()         # solve using simple method
-        print("Finished to solve using simple method")
+        print(">>> Finished!")
 
         '''
         while not self.grid.isSolved():   # or self.grid[i].solved
@@ -302,43 +360,50 @@ my_hardest = [[8, 0, 0, 0, 0, 0, 0, 0, 0],
               [0, 9, 0, 0, 0, 0, 4, 0, 0]]
 
 
-my_puzzle = my_simple_01
+my_puzzle =  my_complex_01 #my_simple_01
 
-myGrid = SudokuGame(my_puzzle)                  # create puzzle
-myGrid.grid.Show(message="Before")
+myGame = SudokuGame(my_puzzle)                  # create puzzle
+myGame.grid.Show(message="Before")
 
 time_start = time.time()                        # get current time
-solved = myGrid.Solve()                         # solve puzzle
+solved = myGame.Solve()                         # solve puzzle
 time_dlt = round(time.time() - time_start,2)    # get time difference
-myGrid.grid.Show(message="After")
+myGame.grid.Show(message="After")
 
 if (solved):
-    print("Sudoku is solved in %s seconds,  and %s placements" % (time_dlt , len(myGrid.moves)))
+    print("Sudoku is solved in %s seconds,  and %s placements" % (time_dlt , len(myGame.moves)))
 else:
-    print("Sudoku is still UNRESOLVED in %s seconds,  and %s placements" % (time_dlt , len(myGrid.moves)))
+    print("Sudoku is still UNRESOLVED in %s seconds,  and %s placements" % (time_dlt , len(myGame.moves)))
 
 print("The End.")
 
+
+
+
+
+
+
+
+
+
+
 # ToDo:
+#   [X] Implemented Grid.ColHiddenSingleValue, Grid.RowHiddenSingleValue, Grid.BoxHiddenSingleValue methods
+#   [X] Optimize Grid.getCandidate and Grid.getExceptions methods
+#
+#   Committed:
+#   [X] Create twinList - list of identical possibilities for the board
+#   [X] fix issue: remove twinList items where list of coordinates in the value is shorter than 2 items
+#   [X] Sort twinList dictionary by the length of the key - shortest number of possibilities
 #   [X] Rename method from getBlock to getBox
 #   [X] Rename Cell.possibilities attribute to Cell.candidates
 #   [X] Rename object and variables from Puzzle/puzzle to Grid
 #   [X] Rename Grid.SetAllSiglePossibilities method to Grid.SetAllSingleCandidates
-#   ---
-#
-#   [ ] for each number (N) in possibility dictionary key (twinList)
-#       [ ] for each coordinate set (R,C) in the current possibility dictionary key.value
-#           [ ] copy puzzle, and set cell (R,C) to N
-#           [ ] try to .Solve puzzle
-#   Done:
-#   [X] Create twinList - list of identical possibilities for the board
-#   [X] fix issue: remove twinList items where list of coordinates in the value is shorter than 2 items
-#   [X] Sort twinList dictionary by the length of the key - shortest number of possibilities
 
 
 # Links:
-#   Sudoku Alorythms
-#   https://www.sudokudragon.com/sudokustrategy.htm
+#   Sudoku methods
+#    http://hodoku.sourceforge.net/en/tech_intro.php
 #
 # currently solves simple puzzles
 # need to explore more options
