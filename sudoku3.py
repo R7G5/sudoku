@@ -187,7 +187,8 @@ class Grid:
                         old_Value = self.board[i][j].value      # save previous cell value
                         new_Value = tmp[0]                      # set to single possible number
 
-                        self.board[i][j].value = tmp[0]         # tmp list MUST only have single element
+                        self.board[i][j].value = new_Value         # tmp list MUST only have single element
+                        self.CurrentBoard[i][j] = new_Value
                         self.board[i][j].solved = True
 
                         self.moves.append({"row": i, "col": j, "value_before": old_Value, "value_after": new_Value})  # append move to the moves list
@@ -265,6 +266,7 @@ class Grid:
         while (not solved):
 
             saved = self.getCurrentBoard()                  # save arrays of the current board
+            saved_m = self.getCurrentBoard()
 
             AllowedToRun = True
             print(">>> Starting Single Candidate method...")
@@ -277,13 +279,14 @@ class Grid:
             print(">>> Starting Hidden Single Candidate method...")
             while AllowedToRun:
                 current = self.SetAllHiddenSingleCandidates()
+                self.Show("Debug: Hidden Singe")
                 AllowedToRun = (current != saved) #or (not self.isSolved())
                 saved = copy.deepcopy(current)
 
             solved = self.isSolved()                        # is it solved yet?
             current = self.getCurrentBoard()                # set all single candidates and save array again
 
-            if (current == saved) and (not solved):         # if nothing changes and still unsolved
+            if (current == saved_m) and (not solved):         # if nothing changes and still unsolved
                 print(">>> Ran out of all methods. Quitting! ")
                 break
 
