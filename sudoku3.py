@@ -99,27 +99,35 @@ class Grid:
 
     def RowHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Row
         HiddenSingle = 0
+        row_candidates = []
         for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
             for otherCol in list({0, 1, 2, 3, 4, 5, 6, 7, 8} - {col}):  # iterate through each column except specified
+                row_candidates += self.board[row][otherCol].candidates  # collect candidates from other cells in the row
+                row_candidates = list(set(row_candidates))              # remove duplicates
 
-                if candidate in self.board[row][otherCol].candidates:   # if current candidate of provided cell is in the list of candidates of another cell
-                    HiddenSingle = 0                                    # set to 0 to reset is was previously saved
-                    continue                                            # get next candidate
-                else:
-                    HiddenSingle = candidate                            # save candidate of the current cell
+            if candidate in row_candidates:                             # if current candidate is in the list of row candidates
+                HiddenSingle = 0                                    # set to 0 to reset if it was previously saved
+                continue                                            # get next candidate
+            else:
+                HiddenSingle = candidate                            # save candidate of the current cell
+                break                                               # found it
         return HiddenSingle
 
 
     def ColHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Cow
         HiddenSingle = 0
+        col_candidates = []
         for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
             for otherRow in list({0, 1, 2, 3, 4, 5, 6, 7, 8} - {row}):  # iterate through each column except specified
+                col_candidates += self.board[otherRow][col].candidates  # collect candidates from other cells in the row
+                col_candidates = list(set(col_candidates))              # remove duplicates
 
-                if candidate in self.board[otherRow][col].candidates:   # if current candidate of provided cell is in the list of candidates of another cell
-                    HiddenSingle = 0                                    # set to 0 to reset is was previously saved
-                    continue                                            # get next candidate
-                else:
-                    HiddenSingle = candidate                            # save candidate of the current cell
+            if candidate in col_candidates:                             # if current candidate of provided cell is in the list of candidates of another cell
+                HiddenSingle = 0                                        # set to 0 to reset is was previously saved
+                continue                                                # get next candidate
+            else:
+                HiddenSingle = candidate                                # save candidate of the current cell
+                break
         return HiddenSingle
 
 
@@ -142,18 +150,53 @@ class Grid:
             b_col = 6
 
         HiddenSingle = 0
+        box_candidates = []
 
         for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
             for i in list(set(range(b_row, b_row + 3)) - {row}):        # iterate each row except specified
                 for j in list(set(range(b_col, b_col + 3)) - {col}):    # iterate each col except specified
 
-                    if candidate in self.board[i][j].candidates:        # if current candidate of provided cell is in the list of candidates of another cell
+                    box_candidates += self.board[i][j].candidates       # collect candidates from other cells in the row
+                    box_candidates = list(set(box_candidates))          # remove duplicates
+
+                    if candidate in box_candidates:                     # if current candidate of provided cell is in the list of candidates of another cell
                         HiddenSingle = 0                                # set to 0 to reset is was previously saved
                         continue                                        # get next candidate
                     else:
                         HiddenSingle = candidate                        # save candidate of the current cell
+                        break
 
         return HiddenSingle
+
+    def SetAllHiddenSingleCandidates(self):
+
+        row_hs, col_hs, box_hs = 0, 0, 0
+
+        for i in range(0, 9):
+            for j in range (0,9):
+                if ((not self.board[i][j].solved)) and (len(self.board[i][j].candidates) > 1):  # if cell is not solved and candidate list has more than one number
+                    row_hs = self.RowHiddenSingleValue(i,j)
+                    col_hs = self.ColHiddenSingleValue(i,j)
+                    box_hs = self.BoxHiddenSingleValue(i,j)
+
+                    tmp = [row_hs, col_hs, box_hs]              # make list
+                    tmp = [elem for elem in tmp if elem != 0]   # remove 0's to reveal any real values
+
+                    if len(tmp) > 0:
+
+                        old_Value = self.board[i][j].value      # save previous cell value
+                        new_Value = tmp[0]                      # set to single possible number
+
+                        self.board[i][j].value = tmp[0]         # tmp list MUST only have single element
+                        self.board[i][j].solved = True
+
+                        self.moves.append({"row": i, "col": j, "value_before": old_Value, "value_after": new_Value})  # append move to the moves list
+                        print("Row:%s  Col:%s  Before:%s  After:%s" % (i, j, old_Value, new_Value))
+
+                    self.RecalculateAllCandidates()             # recalculate all candidates
+
+        cp = copy.deepcopy(self.CurrentBoard)
+        return cp
 
     '''
     # Populates attribute twinList with identical possibiities
@@ -191,7 +234,7 @@ class Grid:
                     self.CurrentBoard[i][j] = new_Value     # maintain array copy of the board
 
                     self.board[i][j].solved = True          # set board solved attribute True
-                    self.RecalculateAllCandidates()                   # recalculate all exceptions and possibilities
+                    self.RecalculateAllCandidates()         # recalculate all candidates
 
         tmp = copy.deepcopy(self.CurrentBoard)              # return array
         return tmp
@@ -220,17 +263,29 @@ class Grid:
         solved = False
 
         while (not solved):
-            solved = self.isSolved()                        # is it solved yet?
+
             saved = self.getCurrentBoard()                  # save arrays of the current board
-            current = self.SetAllSingleCandidates()         # set all single candidates and save array again
+
+            AllowedToRun = True
+            print(">>> Starting Single Candidate method...")
+            while AllowedToRun:
+                current = self.SetAllSingleCandidates()
+                AllowedToRun =  (current != saved) #or (not self.isSolved())
+                saved = copy.deepcopy(current)
+
+            AllowedToRun = True
+            print(">>> Starting Hidden Single Candidate method...")
+            while AllowedToRun:
+                current = self.SetAllHiddenSingleCandidates()
+                AllowedToRun = (current != saved) #or (not self.isSolved())
+                saved = copy.deepcopy(current)
+
+            solved = self.isSolved()                        # is it solved yet?
+            current = self.getCurrentBoard()                # set all single candidates and save array again
 
             if (current == saved) and (not solved):         # if nothing changes and still unsolved
-                self.Show("Warning: Ran out of options single possibility options!")
-
-
-                # use additional algorithm
+                print(">>> Ran out of all methods. Quitting! ")
                 break
-
 
         return solved, self.moves
 
@@ -389,7 +444,7 @@ print("The End.")
 
 # ToDo:
 #   [X] Implemented Grid.ColHiddenSingleValue, Grid.RowHiddenSingleValue, Grid.BoxHiddenSingleValue methods
-#   [X] Optimize Grid.getCandidate and Grid.getExceptions methods
+#   [X] Optimized Grid.getCandidate and Grid.getExceptions methods
 #
 #   Committed:
 #   [X] Create twinList - list of identical possibilities for the board
