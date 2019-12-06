@@ -4,27 +4,21 @@ import sys
 
 class Cell:
 
-    #ToDo Not Committed: Removed row,col from def __init__(self, row, col, value=0):
     def __init__(self, value=0):
         self.value  = value                 # current value
         self.solved = False                 # this cell is solved
-        #ToDo Not Committed: Removed cell.row & col attributes
-        #self.row = row                      # cell row position
-        #self.col = col                      # cell column position
         self.exceptions = []                # list of values not allowed in cell due to position
         self.candidates = []                # list of possible values
 
-    def set(self,value):
-        if self.value in self.candidates:
+    def setCellValue(self,value):
+        #if value in self.candidates:
             self.value = value                                      # set value
-            self.exceptions = list(set(self.exceptions).add(value)) # add to exceptions
-            self.candidates = list(set(self.candidates) - {value})  # remove from candidates
-        else:
-            print("Error: stying to assign value (%s) that is not in the candidate list" % (value))
-            sys.exit(1)
-
-    def get(self):
-        return self.value
+            self.solved = True
+            self.exceptions = [1,2,3,4,5,6,7,8,9].remove(value)  #.append(value) # add to exceptions
+            self.candidates = []  #remove(value)  # remove from candidates
+        #else:
+        #    print("Error: Trying to assign value (%s) that is not in the candidate list" % (value))
+        #    sys.exit(1)
 
 class Grid:
 
@@ -36,14 +30,6 @@ class Grid:
                                             # key = tuple of possible numbers
                                             # value = list of touple coordinates
 
-        '''
-        mydict = {
-            possibilities : ((row1,col1),...)
-	        (2,4,7) : (0,1),
-	        (5,8) : ((1,4),(3,0))
-	        }
-        '''
-
         for i in range(0,9):
             self.board.append([])                               # create new row
             for j in range (0,9):
@@ -51,23 +37,23 @@ class Grid:
                 self.board[i][j].solved = puzzle[i][j] != 0     # Marked solved if not 0
         self.RecalculateAllCandidates()
 
-    def getCurrentBoard(self):  # returns an array copy of the grid
+    def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
         return tmp
 
-    def getCol(self, col):      # returns list of values from the Col where provided cell resides
+    def getColValues(self, col):      # returns list of values from the Col where provided cell resides
         tmp = []
         for i in range(0, 9):
             tmp.append(self.board[i][col].value)
         return tmp
 
-    def getRow(self, row):      # returns list of values from the Row where provided cell resides
+    def getRowValues(self, row):      # returns list of values from the Row where provided cell resides
         tmp = []
         for j in range(0, 9):
             tmp.append(self.board[row][j].value)
         return tmp
 
-    def getBox(self, row, col): # returns list of values from the Box where provided cell resides
+    def getBoxValues(self, row, col): # returns list of values from the Box where provided cell resides
 
         b_row, b_col = 0, 0
 
@@ -91,24 +77,26 @@ class Grid:
                 tmp.append(self.board[i][j].value)
         return tmp
 
-    def getExceptions(self, row, col):
-        tmp = []
-        tmp = set(self.getBox(row, col) + self.getCol(col) + self.getRow(row))    # create unique list of candidates
-        tmp = [elem for elem in tmp if elem != 0]                                 # remove all zeros
-        return tmp
+    def setCellExceptions(self, row=0, col=0):
+        exceptionList = []
+        exceptionList = set(self.getBoxValues(row, col) + self.getColValues(col) + self.getRowValues(row))    # create unique list of candidates
+        exceptionList = [elem for elem in exceptionList if elem != 0]                                 # remove all zeros
+        self.board[row][col].exceptions = exceptionList
+        return exceptionList
 
-    def getCandidates(self, row, col):
+    #def getCandidates(self, row=0, col=0):
+    def setCellCandidates(self, row=0, col=0):
         allNumbers =  [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        #exceptionList = self.getExceptions(row, col)
-        self.board[row][col].exceptions = self.getExceptions(row, col)        # set exception field
-        return list(set(allNumbers) - set(self.board[row][col].exceptions))   # list of numbers not in exception list
+        exceptionList = self.setCellExceptions(row, col)        # set and return cell exceptions
+        candidateList = list(set(allNumbers) - set(exceptionList))
+        self.board[row][col].candidates = candidateList
+        return candidateList       # list of numbers not in exception list
 
     def RecalculateAllCandidates(self):
         for i in range(0, 9):
             for j in range (0,9):
                 if not self.board[i][j].solved:
-                    #self.board[i][j].exceptions = self.getExceptions(i, j)
-                    self.board[i][j].candidates = self.getCandidates(i, j)
+                    self.setCellCandidates(i,j) #candidates = self.getCandidates(i, j)
 
 
     def RowHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Row
@@ -167,18 +155,24 @@ class Grid:
         box_candidates = []
 
         for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
-            for i in list(set(range(b_row, b_row + 3)) - {row}):        # iterate each row except specified
-                for j in list(set(range(b_col, b_col + 3)) - {col}):    # iterate each col except specified
+            #row_list = list(set(range(b_row, b_row + 3)) - {row})
+            #col_list = list(set(range(b_col, b_col + 3)) - {col})
+
+            for i in range(b_row, b_row + 3):        # iterate each row except specified
+                for j in range(b_col, b_col + 3):    # iterate each col except specified
+
+                    if (i == row) and (j == col):
+                        continue
 
                     box_candidates += self.board[i][j].candidates       # collect candidates from other cells in the row
                     box_candidates = list(set(box_candidates))          # remove duplicates
 
-                    if candidate in box_candidates:                     # if current candidate of provided cell is in the list of candidates of another cell
-                        HiddenSingle = 0                                # set to 0 to reset is was previously saved
-                        continue                                        # get next candidate
-                    else:
-                        HiddenSingle = candidate                        # save candidate of the current cell
-                        break
+            if candidate in box_candidates:                     # if current candidate of provided cell is in the list of candidates of another cell
+                HiddenSingle = 0                                # set to 0 to reset is was previously saved
+                continue                                        # get next candidate
+            else:
+                HiddenSingle = candidate                        # save candidate of the current cell
+                break
 
         return HiddenSingle
 
@@ -188,6 +182,10 @@ class Grid:
 
         for i in range(0, 9):
             for j in range (0,9):
+
+                if ((i==1) and (j==7)):   # ToDo: DEBUG all cells - BREAKPOINT
+                    print("DEBUG")
+                
                 if ((not self.board[i][j].solved)) and (len(self.board[i][j].candidates) > 1):  # if cell is not solved and candidate list has more than one number
                     row_hs = self.RowHiddenSingleValue(i,j)
                     col_hs = self.ColHiddenSingleValue(i,j)
@@ -201,14 +199,15 @@ class Grid:
                         old_Value = self.board[i][j].value      # save previous cell value
                         new_Value = tmp[0]                      # set to single possible number
 
-                        self.board[i][j].value = new_Value         # tmp list MUST only have single element
+                        #self.board[i][j].value = new_Value         # tmp list MUST only have single element
+                        self.board[i][j].setCellValue(new_Value)
                         self.CurrentBoard[i][j] = new_Value
-                        self.board[i][j].solved = True
+                        #self.board[i][j].solved = True
 
                         self.moves.append({"row": i, "col": j, "value_before": old_Value, "value_after": new_Value})  # append move to the moves list
                         print("Row:%s  Col:%s  Before:%s  After:%s" % (i, j, old_Value, new_Value))
 
-                    self.RecalculateAllCandidates()             # recalculate all candidates
+                        self.RecalculateAllCandidates()             # recalculate all candidates
 
         cp = copy.deepcopy(self.CurrentBoard)
         return cp
@@ -244,8 +243,9 @@ class Grid:
                     self.moves.append({"row":i, "col":j, "value_before":old_Value, "value_after": new_Value }) # append move to the moves list
                     print("Row:%s  Col:%s  Before:%s  After:%s" % (i, j, old_Value, new_Value))
 
-                    self.board[i][j].value =  new_Value     # set the only possibility as a value
-                    self.board[i][j].solved = True          # mark cell solved
+                    #self.board[i][j].value =  new_Value     # set the only possibility as a value
+                    self.board[i][j].setCellValue(new_Value)
+                    #self.board[i][j].solved = True          # mark cell solved
                     self.CurrentBoard[i][j] = new_Value     # maintain array copy of the board
 
                     self.board[i][j].solved = True          # set board solved attribute True
@@ -279,13 +279,14 @@ class Grid:
 
         while (not solved):
 
-            saved = self.getCurrentBoard()                  # save arrays of the current board
-            saved_m = self.getCurrentBoard()
+            saved = self.getBoardSnapshot()                  # save arrays of the current board
+            saved_m = self.getBoardSnapshot()
 
             AllowedToRun = True
             print(">>> Starting Single Candidate method...")
             while AllowedToRun:
                 current = self.SetAllSingleCandidates()
+                self.Show("Debug: Singe Candidate")
                 AllowedToRun =  (current != saved) #or (not self.isSolved())
                 saved = copy.deepcopy(current)
 
@@ -298,7 +299,7 @@ class Grid:
                 saved = copy.deepcopy(current)
 
             solved = self.isSolved()                        # is it solved yet?
-            current = self.getCurrentBoard()                # set all single candidates and save array again
+            current = self.getBoardSnapshot()                # set all single candidates and save array again
 
             if (current == saved_m) and (not solved):         # if nothing changes and still unsolved
                 print(">>> Ran out of all methods. Quitting! ")
@@ -452,22 +453,15 @@ print("The End.")
 
 
 
-
-
-
-
-
-
-
 # ToDo:
 #   [X] Implemented Grid.ColHiddenSingleValue, Grid.RowHiddenSingleValue, Grid.BoxHiddenSingleValue methods
-#   [X] Optimized Grid.getCandidate and Grid.getExceptions methods
+#   [X] Optimized Grid.getCandidate and Grid.buildExceptions methods
 #
 #   Committed:
 #   [X] Create twinList - list of identical possibilities for the board
 #   [X] fix issue: remove twinList items where list of coordinates in the value is shorter than 2 items
 #   [X] Sort twinList dictionary by the length of the key - shortest number of possibilities
-#   [X] Rename method from getBlock to getBox
+#   [X] Rename method from getBlock to getBoxValues
 #   [X] Rename Cell.possibilities attribute to Cell.candidates
 #   [X] Rename object and variables from Puzzle/puzzle to Grid
 #   [X] Rename Grid.SetAllSiglePossibilities method to Grid.SetAllSingleCandidates
