@@ -1,6 +1,6 @@
 import time
 import copy
-import sys
+#import sys
 
 class Cell:
 
@@ -14,28 +14,54 @@ class Cell:
         #if value in self.candidates:
             self.value = value                                      # set value
             self.solved = True
-            self.exceptions = [1,2,3,4,5,6,7,8,9].remove(value)  #.append(value) # add to exceptions
+            self.exceptions = [1,2,3,4,5,6,7,8,9]
+            self.exceptions.remove(value)  #.append(value) # add to exceptions
             self.candidates = []  #remove(value)  # remove from candidates
         #else:
         #    print("Error: Trying to assign value (%s) that is not in the candidate list" % (value))
         #    sys.exit(1)
+
+    def RemoveCellExceptions(self,exceptions):      # removes provided exceptions
+            for exception in exceptions:
+                self.exceptions.remove(exception)
 
 class Grid:
 
     def __init__(self, puzzle):
         self.board = []                             # array of boards
         self.CurrentBoard = copy.deepcopy(puzzle)   # simple array representation of the board
-        self.moves = []                             # list of moves
+        self.moves = []                             # list of moves r3c1=9 (assing), r4c9-4 (remove candidate), r8c1+1379 (add candidates), r347c4-6 (remove candidates
         self.twinList = {}                  # list of identical possibilities per row or col.
                                             # key = tuple of possible numbers
                                             # value = list of touple coordinates
-
         for i in range(0,9):
             self.board.append([])                               # create new row
             for j in range (0,9):
                 self.board[i].append(Cell(puzzle[i][j]))        # copy the value to the cell
                 self.board[i][j].solved = puzzle[i][j] != 0     # Marked solved if not 0
         self.RecalculateAllCandidates()
+
+    def getBoxCoordinates(self, BoxNum):     # Returns list of rows and cols for the box
+        rows, cols = [], []                  # Boxes are numbered left to right, top to bottom 1..9
+
+        if BoxNum in [1,2,3]:
+            rows = [0,1,2]
+        elif BoxNum in [4,5,6]:
+            rows = [3,4,5]
+        elif BoxNum in [7,8,9]:
+            rows = [6,7,8]
+
+        if BoxNum in [1,4,7]:
+            cols = [0,1,2]
+        elif BoxNum in [2,5,8]:
+            cols = [3,4,5]
+        elif BoxNum in [3,6,9]:
+            cols = [6,7,8]
+
+        return  {"rows":rows, "cols":cols}
+
+    def solveMethod_Pointing(self):
+        pass
 
     def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
@@ -115,7 +141,6 @@ class Grid:
                 break                                               # found it
         return HiddenSingle
 
-
     def ColHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Cow
         HiddenSingle = 0
         col_candidates = []
@@ -131,7 +156,6 @@ class Grid:
                 HiddenSingle = candidate                                # save candidate of the current cell
                 break
         return HiddenSingle
-
 
     def BoxHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Box
 
@@ -182,9 +206,6 @@ class Grid:
 
         for i in range(0, 9):
             for j in range (0,9):
-
-                if ((i==1) and (j==7)):   # ToDo: DEBUG all cells - BREAKPOINT
-                    print("DEBUG")
                 
                 if ((not self.board[i][j].solved)) and (len(self.board[i][j].candidates) > 1):  # if cell is not solved and candidate list has more than one number
                     row_hs = self.RowHiddenSingleValue(i,j)
@@ -199,40 +220,19 @@ class Grid:
                         old_Value = self.board[i][j].value      # save previous cell value
                         new_Value = tmp[0]                      # set to single possible number
 
-                        #self.board[i][j].value = new_Value         # tmp list MUST only have single element
                         self.board[i][j].setCellValue(new_Value)
                         self.CurrentBoard[i][j] = new_Value
-                        #self.board[i][j].solved = True
 
                         self.moves.append({"row": i, "col": j, "value_before": old_Value, "value_after": new_Value})  # append move to the moves list
-                        print("Row:%s  Col:%s  Before:%s  After:%s" % (i, j, old_Value, new_Value))
+                        print("r%sc%s=%s" % (i, j, new_Value))
 
                         self.RecalculateAllCandidates()             # recalculate all candidates
 
         cp = copy.deepcopy(self.CurrentBoard)
         return cp
 
-    '''
-    # Populates attribute twinList with identical possibiities
-    def setTwinList(self):
-        self.twinList = {}  # clear existing data
-
-        for i in range(0, 9):
-            for j in range (0,9):
-                if not self.board[i][j].solved:
-                    tpl = tuple(sorted(self.board[i][j].candidates))     # get list of current possibilities
-                    if tpl not in self.twinList.keys():                         # if does not exist
-                        self.twinList[tpl] = []                                 # create one
-                    self.twinList[tpl].append((i,j))                            # add (row,col) tuple to the list
-
-        self.twinList = dict(filter(lambda item: len(item[1]) > 1, self.twinList.items()))  # only keep items with two or more cell coordinates
-        self.twinList = sorted(self.twinList.items(), key=lambda item: len(item[0]))         # sort by length of possibility list
-    #return ?
-    '''
-
     def SetAllSingleCandidates(self):    # sets all cells with the only possible number to that number
                                          # Covered methods: Full House; Naked Single
-
         for i in range(0, 9):
             for j in range (0,9):
                 if ((not self.board[i][j].solved)) and (len(self.board[i][j].candidates) == 1): # if cell has only one possible number
@@ -241,7 +241,7 @@ class Grid:
                     new_Value = self.board[i][j].candidates[0]   # set to single possible number
 
                     self.moves.append({"row":i, "col":j, "value_before":old_Value, "value_after": new_Value }) # append move to the moves list
-                    print("Row:%s  Col:%s  Before:%s  After:%s" % (i, j, old_Value, new_Value))
+                    print("MOVE: Row:%s  Col:%s  Before:%s  After:%s" % (i, j, old_Value, new_Value))
 
                     #self.board[i][j].value =  new_Value     # set the only possibility as a value
                     self.board[i][j].setCellValue(new_Value)
@@ -286,7 +286,7 @@ class Grid:
             print(">>> Starting Single Candidate method...")
             while AllowedToRun:
                 current = self.SetAllSingleCandidates()
-                self.Show("Debug: Singe Candidate")
+                self.Show()
                 AllowedToRun =  (current != saved) #or (not self.isSolved())
                 saved = copy.deepcopy(current)
 
@@ -294,7 +294,7 @@ class Grid:
             print(">>> Starting Hidden Single Candidate method...")
             while AllowedToRun:
                 current = self.SetAllHiddenSingleCandidates()
-                self.Show("Debug: Hidden Singe")
+                self.Show()
                 AllowedToRun = (current != saved) #or (not self.isSolved())
                 saved = copy.deepcopy(current)
 
@@ -322,58 +322,7 @@ class SudokuGame:
         self.solved, self.moves = self.grid.Solve()         # solve using simple method
         print(">>> Finished!")
 
-        '''
-        while not self.grid.isSolved():   # or self.grid[i].solved
-            self.grid.setTwinList()
-
-            for key, value in self.grid.twinList:   # iterate key (possible numbers) and values cell coordinates
-                for possibility in key:                  # iterate through all possible numbers in the key
-                    print("==>Exporing Possibility: %s" % (possibility))
-                    for row, col in value:               # iterate through all coordinates in value
-
-                        print("Possible # = %s   Coord:(%s,%s)" % (possibility, row, col))
-
-                        cur_board = copy.deepcopy(self.grid.CurrentBoard)   # make array copy of existing board
-                        cur_board[row][col] = possibility                     # replace cell with possibility
-                        tmp_game = SudokuGame(cur_board)                      # create new SudokuGame object
-                        tmp_game.Solve()                                      # try to solve it
-
-                        if tmp_game.solved:                                   # if solved: exit
-                            self.grid.moves += tmp_game.grid.moves
-                            print("Line 206: Grid solved!!!")
-                            self.solved = True
-                            return self.solved
-        '''
         return self.solved
-
-'''
-for k,v in mydict.items():
-	print(k,"=",v)
-	for possibility in k:
-		print(" |-",possibility)
-		for row,col in v:
-			print("    |--- row:",row," col:",col)
-
-			
-(2, 4, 7) = [(0, 1), (0, 7)]
- |- 2
-    |--- row: 0  col: 1
-    |--- row: 0  col: 7
- |- 4
-    |--- row: 0  col: 1
-    |--- row: 0  col: 7
- |- 7
-    |--- row: 0  col: 1
-    |--- row: 0  col: 7
-(5, 8) = [(1, 4), (3, 0)]
- |- 5
-    |--- row: 1  col: 4
-    |--- row: 3  col: 0
- |- 8
-    |--- row: 1  col: 4
-    |--- row: 3  col: 0
-''' # example
-
 
 # main module
 
@@ -474,3 +423,70 @@ print("The End.")
 # currently solves simple puzzles
 # need to explore more options
 
+'''
+# Populates attribute twinList with identical possibiities
+def setTwinList(self):
+    self.twinList = {}  # clear existing data
+
+    for i in range(0, 9):
+        for j in range (0,9):
+            if not self.board[i][j].solved:
+                tpl = tuple(sorted(self.board[i][j].candidates))     # get list of current possibilities
+                if tpl not in self.twinList.keys():                         # if does not exist
+                    self.twinList[tpl] = []                                 # create one
+                self.twinList[tpl].append((i,j))                            # add (row,col) tuple to the list
+
+    self.twinList = dict(filter(lambda item: len(item[1]) > 1, self.twinList.items()))  # only keep items with two or more cell coordinates
+    self.twinList = sorted(self.twinList.items(), key=lambda item: len(item[0]))         # sort by length of possibility list
+#return ?
+'''
+''' from SudokuGame.Solve
+while not self.grid.isSolved():   # or self.grid[i].solved
+    self.grid.setTwinList()
+
+    for key, value in self.grid.twinList:   # iterate key (possible numbers) and values cell coordinates
+        for possibility in key:                  # iterate through all possible numbers in the key
+            print("==>Exporing Possibility: %s" % (possibility))
+            for row, col in value:               # iterate through all coordinates in value
+
+                print("Possible # = %s   Coord:(%s,%s)" % (possibility, row, col))
+
+                cur_board = copy.deepcopy(self.grid.CurrentBoard)   # make array copy of existing board
+                cur_board[row][col] = possibility                     # replace cell with possibility
+                tmp_game = SudokuGame(cur_board)                      # create new SudokuGame object
+                tmp_game.Solve()                                      # try to solve it
+
+                if tmp_game.solved:                                   # if solved: exit
+                    self.grid.moves += tmp_game.grid.moves
+                    print("Line 206: Grid solved!!!")
+                    self.solved = True
+                    return self.solved
+'''
+
+'''
+for k,v in mydict.items():
+	print(k,"=",v)
+	for possibility in k:
+		print(" |-",possibility)
+		for row,col in v:
+			print("    |--- row:",row," col:",col)
+
+
+(2, 4, 7) = [(0, 1), (0, 7)]
+ |- 2
+    |--- row: 0  col: 1
+    |--- row: 0  col: 7
+ |- 4
+    |--- row: 0  col: 1
+    |--- row: 0  col: 7
+ |- 7
+    |--- row: 0  col: 1
+    |--- row: 0  col: 7
+(5, 8) = [(1, 4), (3, 0)]
+ |- 5
+    |--- row: 1  col: 4
+    |--- row: 3  col: 0
+ |- 8
+    |--- row: 1  col: 4
+    |--- row: 3  col: 0
+'''  # example
