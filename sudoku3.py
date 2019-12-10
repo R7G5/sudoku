@@ -4,26 +4,53 @@ import copy
 
 class Cell:
 
-    def __init__(self, value=0):
+    def __init__(self, row, col, value=0):
         self.value  = value                 # current value
         self.solved = False                 # this cell is solved
         self.exceptions = []                # list of values not allowed in cell due to position
         self.candidates = []                # list of possible values
+        self.row = row
+        self.col = col
+        self.box = self.getBoxNum(row,col)
+
+    @staticmethod
+    def getBoxNum(row,col):
+        box = 0
+        if (row in [0,1,2]):
+            if (col in [0,1,2]):
+                box = 1
+            if (col in [3,4,5]):
+                box = 2
+            if (col in [6,7,8]):
+                box = 3
+
+        if (row in [3, 4, 5]):
+            if (col in [0,1,2]):
+                box = 4
+            if (col in [3,4,5]):
+                box = 5
+            if (col in [6,7,8]):
+                box = 6
+
+        if (row in [6, 7, 8]):
+            if (col in [0,1,2]):
+                box = 7
+            if (col in [3,4,5]):
+                box = 8
+            if (col in [6,7,8]):
+                box = 9
+        return box
 
     def setCellValue(self,value):
-        #if value in self.candidates:
-            self.value = value                                      # set value
+            self.value = value
             self.solved = True
-            self.exceptions = [1,2,3,4,5,6,7,8,9]
-            self.exceptions.remove(value)  #.append(value) # add to exceptions
-            self.candidates = []  #remove(value)  # remove from candidates
-        #else:
-        #    print("Error: Trying to assign value (%s) that is not in the candidate list" % (value))
-        #    sys.exit(1)
+            self.exceptions = [] #[1, 2, 3, 4, 5, 6, 7, 8, 9]  #self.exceptions.remove(value)
+            self.candidates = []
 
     def RemoveCellExceptions(self,exceptions):      # removes provided exceptions
             for exception in exceptions:
                 self.exceptions.remove(exception)
+
 
 class Grid:
 
@@ -35,14 +62,21 @@ class Grid:
                                             # key = tuple of possible numbers
                                             # value = list of touple coordinates
         for i in range(0,9):
-            self.board.append([])                               # create new row
+            self.board.append([])           # create new row
             for j in range (0,9):
-                self.board[i].append(Cell(puzzle[i][j]))        # copy the value to the cell
+                self.board[i].append(Cell(row=i, col=j, value=puzzle[i][j]))        # copy the value to the cell
                 self.board[i][j].solved = puzzle[i][j] != 0     # Marked solved if not 0
         self.RecalculateAllCandidates()
 
-    def getBoxCoordinates(self, BoxNum):     # Returns list of rows and cols for the box
-        rows, cols = [], []                  # Boxes are numbered left to right, top to bottom 1..9
+    def getHouseRow_coordinates(self, cell):   # get list of house row coordinates, excluding current cell
+        return [ (cell.row, clm) for clm in range(0, 10) ] # if clm !=cell.col ]
+
+    def getHouseCol_coordinates(self, cell):   # get list of house col coordinates, excluding current cell
+        return [ (rw, cell.row) for rw in range(0, 10) ] # if rw !=cell.row ]
+
+    @staticmethod
+    def getHouseBox_coordinates(BoxNum):
+        rows, cols = [], []
 
         if BoxNum in [1,2,3]:
             rows = [0,1,2]
@@ -58,10 +92,23 @@ class Grid:
         elif BoxNum in [3,6,9]:
             cols = [6,7,8]
 
-        return  {"rows":rows, "cols":cols}
+        return [(r, c) for r in rows for c in cols]
+        #[(x,c) for x in range(0,5) if x !=3 for c in range(0,5) if c !=3]
 
-    def solveMethod_Pointing(self):
+    def getRowCandidates(self, cell):
+        #return [ self.board[cell.row][col].candidates for col in range(0,10) ]
+        res = []
+        for col in range(0,10):
+            res += self.board[cell.row][col].candidates
+
+
+    def solveBy_LockedCandidateType1(self): #ToDo: Complete this
+        # Locked Candidates Type 1(Pointing)
+        #   If in a block all candidates of a certain digit are confined to a row or column,
+        #   that digit cannot appear outside of that block in that row or column.
         pass
+
+
 
     def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
@@ -386,6 +433,10 @@ my_puzzle =  my_complex_01 #my_simple_01
 
 myGame = SudokuGame(my_puzzle)                  # create puzzle
 myGame.grid.Show(message="Before")
+
+# ToDo: testing new function
+myGame.grid.getRowCandidates(myGame.grid.board[0][1])
+
 
 time_start = time.time()                        # get current time
 solved = myGame.Solve()                         # solve puzzle
