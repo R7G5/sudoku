@@ -95,11 +95,23 @@ class Grid:
         return [(r, c) for r in rows for c in cols]
         #[(x,c) for x in range(0,5) if x !=3 for c in range(0,5) if c !=3]
 
-    def getRowCandidates(self, cell):
-        #return [ self.board[cell.row][col].candidates for col in range(0,10) ]
-        res = []
-        for col in range(0,10):
-            res += self.board[cell.row][col].candidates
+    def getBoxRowCandidates(self, cell): # ToDo: Need to test
+        ROW, COL  = 0, 1
+        houseCoords = self.getHouseBox_coordinates(cell.box)      # get list cell coordinates of the box
+        cols = [coord[COL] for coord in houseCoords if coord[ROW] == cell.row]  # extract column numbers
+
+        # assemble list of candidates from the row,col(n)
+        cand =  [ self.board[cell.row][col].candidates for col in cols if len(self.board[cell.row][col].candidates)!=0]
+        return cand
+
+    def getBoxColCandidates(self, cell): # ToDo: Need to test
+        ROW, COL  = 0, 1
+        houseCoords = self.getHouseBox_coordinates(cell.box)      # get list cell coordinates of the box
+        rows = [coord[ROW] for coord in houseCoords if coord[COL] == cell.col]  # extract row numbers
+
+        # assemble list of candidates from the row(n),col
+        cand =  [ self.board[row][cell.col].candidates for row in rows if len(self.board[row][cell.col].candidates)!=0]
+        return cand
 
 
     def solveBy_LockedCandidateType1(self): #ToDo: Complete this
@@ -434,10 +446,6 @@ my_puzzle =  my_complex_01 #my_simple_01
 myGame = SudokuGame(my_puzzle)                  # create puzzle
 myGame.grid.Show(message="Before")
 
-# ToDo: testing new function
-myGame.grid.getRowCandidates(myGame.grid.board[0][1])
-
-
 time_start = time.time()                        # get current time
 solved = myGame.Solve()                         # solve puzzle
 time_dlt = round(time.time() - time_start,2)    # get time difference
@@ -450,12 +458,12 @@ else:
 
 print("The End.")
 
-
+# ToDo: testing new function
+a = myGame.grid.getBoxRowCandidates(myGame.grid.board[0][0])
+print(a)
 
 
 # ToDo:
-#   [X] Implemented Grid.ColHiddenSingleValue, Grid.RowHiddenSingleValue, Grid.BoxHiddenSingleValue methods
-#   [X] Optimized Grid.getCandidate and Grid.buildExceptions methods
 #
 #   Committed:
 #   [X] Create twinList - list of identical possibilities for the board
