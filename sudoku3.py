@@ -101,8 +101,11 @@ class Grid:
         cols = [coord[COL] for coord in houseCoords if coord[ROW] == cell.row]  # extract column numbers
 
         # assemble list of candidates from the row,col(n)
-        cand =  [ self.board[cell.row][col].candidates for col in cols if len(self.board[cell.row][col].candidates)!=0]
+        cand = [ self.board[cell.row][col].candidates for col in cols if len(self.board[cell.row][col].candidates)!=0]
+
+        cand = [item for items in cand for item in items]
         return cand
+
 
     def getBoxColCandidates(self, cell): # ToDo: Need to test
         ROW, COL  = 0, 1
@@ -110,7 +113,7 @@ class Grid:
         rows = [coord[ROW] for coord in houseCoords if coord[COL] == cell.col]  # extract row numbers
 
         # assemble list of candidates from the row(n),col
-        cand =  [ self.board[row][cell.col].candidates for row in rows if len(self.board[row][cell.col].candidates)!=0]
+        cand = [self.board[row][cell.col].candidates for row in rows if len(self.board[row][cell.col].candidates)!=0]
         return cand
 
 
@@ -118,8 +121,54 @@ class Grid:
         # Locked Candidates Type 1(Pointing)
         #   If in a block all candidates of a certain digit are confined to a row or column,
         #   that digit cannot appear outside of that block in that row or column.
-        pass
 
+        # [item for items in cand for item in items]
+
+        ROW, COL  = 0, 1
+
+        for box in range(1,10):                             # for each box 1..9
+
+            coords = self.getHouseBox_coordinates(box)      # get list of box cells
+            confined_box_candidates = {}
+
+            for coord in coords:
+                currentCell = self.board[coord[ROW]][coord[COL]]
+
+                if not currentCell.solved:                                       # if cell is not solved
+
+                    for candidate in currentCell.candidates:                     # look for candidates that are confined to a row or column
+
+                        if candidate not in confined_box_candidates:             # if candidate is already in the list
+                            confined_box_candidates[candidate] = [coord]         # Add newly found to the list
+                            continue
+                        elif (0,0) in confined_box_candidates[candidate]:
+                            continue
+
+
+                        tmp_lst = confined_box_candidates[candidate].copy()      # copy candiata coordinates
+                        tmp_lst.append(coord)                                    # add current coordinates
+
+                        # Unzip coordinate list from [(r1,c1),(r2,c2),...(rN,cN)] to [(r1,r1,...rN),(c1,c2,...cN)]
+                        # Convert each tuple to set() to eliminate duplicates. If single element left then all were the same.
+                        # Returns [True, False] if all ROW indexes match, [False, True] for Column
+                        RowOrColmatch = [len(set(elem))==1 for elem in zip(*tmp_lst)]
+
+                        if any(RowOrColmatch):
+                            if (0,0) not in confined_box_candidates[candidate]:                                  # if not set to be ignored
+                                confined_box_candidates[candidate] += [coord]                                    # good candidate, add coord to the list
+                        else:
+                            confined_box_candidates[candidate] = [(0,0)]     # Ignore this canddate
+
+            # Remove all items containing (0,0)
+            confined_box_candidates = {key: value for (key, value) in confined_box_candidates.items() if (0, 0) not in value}
+            print("DEBUG: Box %s confined_box_candidates: %s" % (box, confined_box_candidates))
+
+        print("End of function")
+            # ToDo: Use confined_box_candidates dict to elimnate candidate from the ROW or COL, depending in which was found
+
+            # example
+            #n = len([i for i, value in enumerate(boxRowCandidates) if value == candidate])   # how many found in the box row
+            #print("   Candidate %s found %s times" % (candidate, n))
 
 
     def getBoardSnapshot(self):  # returns an array copy of the grid
@@ -440,8 +489,18 @@ my_hardest = [[8, 0, 0, 0, 0, 0, 0, 0, 0],
               [0, 0, 8, 5, 0, 0, 0, 1, 0],
               [0, 9, 0, 0, 0, 0, 4, 0, 0]]
 
+# Hard
+my_hudoku_game0 = [[1, 0, 0, 0, 0, 0, 0, 0, 7],
+                   [0, 6, 0, 0, 0, 0, 0, 4, 3],
+                   [0, 4, 3, 0, 5, 0, 2, 0, 0],
+                   [0, 0, 2, 0, 4, 8, 1, 0, 0],
+                   [0, 0 ,0 ,1, 9, 6, 0, 0, 0],
+                   [0, 0, 4, 2, 7, 0, 3, 0, 0],
+                   [0, 0, 6, 0, 2, 0, 7, 3, 0],
+                   [7, 3, 0, 0 ,0, 0, 0, 9, 0],
+                   [2, 0, 0, 0, 0, 0, 0, 0, 1]]
 
-my_puzzle =  my_complex_01 #my_simple_01
+my_puzzle =  my_hudoku_game0 #my_complex_01 #my_simple_01
 
 myGame = SudokuGame(my_puzzle)                  # create puzzle
 myGame.grid.Show(message="Before")
@@ -459,7 +518,8 @@ else:
 print("The End.")
 
 # ToDo: testing new function
-a = myGame.grid.getBoxRowCandidates(myGame.grid.board[0][0])
+#a = myGame.grid.getBoxRowCandidates(myGame.grid.board[0][0])
+a = myGame.grid.solveBy_LockedCandidateType1()
 print(a)
 
 
