@@ -68,11 +68,11 @@ class Grid:
                 self.board[i][j].solved = puzzle[i][j] != 0     # Marked solved if not 0
         self.RecalculateAllCandidates()
 
-    def getHouseRow_coordinates(self, cell):   # get list of house row coordinates, excluding current cell
-        return [ (cell.row, clm) for clm in range(0, 10) ] # if clm !=cell.col ]
+    def getHouseRow_coordinates(self, cell_coord):   # get list of house row coordinates
+        return [ (cell_coord[0], clm) for clm in range(0, 9) ] # if clm !=cell.col ] # excluding current cell
 
-    def getHouseCol_coordinates(self, cell):   # get list of house col coordinates, excluding current cell
-        return [ (rw, cell.row) for rw in range(0, 10) ] # if rw !=cell.row ]
+    def getHouseCol_coordinates(self, cell_coord):   # get list of house col coordinates
+        return [ (rw, cell_coord[1]) for rw in range(0, 9) ] # if rw !=cell.row ] # , excluding current cell
 
     @staticmethod
     def getHouseBox_coordinates(BoxNum):
@@ -117,16 +117,22 @@ class Grid:
         return cand
 
 
-    def solveBy_LockedCandidateType1(self): #ToDo: Complete this
+    def solveBy_LockedCandidateType1(self):
         # Locked Candidates Type 1(Pointing)
         #   If in a block all candidates of a certain digit are confined to a row or column,
         #   that digit cannot appear outside of that block in that row or column.
 
-        # [item for items in cand for item in items]
+        # Structure used to re-group find candidates that reside in the same row or col
+        # { candidate# :
+        #               {
+        #                   coordinates: [(x1,y1),(x1,y2])
+        #                   matchBy    : [False, True]      # [IsRow,IsCol]
+        #               }
+        # }
 
         ROW, COL  = 0, 1
 
-        for box in range(1,10):                             # for each box 1..9
+        for box in range(1,10):                             # for each box 1..9 (ignoring 0)
 
             coords = self.getHouseBox_coordinates(box)      # get list of box cells
             confined_box_candidates = {}
@@ -139,37 +145,59 @@ class Grid:
                     for candidate in currentCell.candidates:                     # look for candidates that are confined to a row or column
 
                         if candidate not in confined_box_candidates:             # if candidate is already in the list
-                            confined_box_candidates[candidate] = [coord]         # Add newly found to the list
+                            confined_box_candidates[candidate] = {}
+                            confined_box_candidates[candidate]["coordinates"] = [coord]         # Add newly found to the list
+                            confined_box_candidates[candidate]["matchBy"] = [False, False]
                             continue
-                        elif (0,0) in confined_box_candidates[candidate]:
+                        elif (0,0) in confined_box_candidates[candidate]["coordinates"]:
                             continue
 
+                        tmp_lst = confined_box_candidates[candidate]["coordinates"].copy()   # copy candiata coordinates
+                        tmp_lst.append(coord)                                               # add current coordinates
 
-                        tmp_lst = confined_box_candidates[candidate].copy()      # copy candiata coordinates
-                        tmp_lst.append(coord)                                    # add current coordinates
-
-                        # Unzip coordinate list from [(r1,c1),(r2,c2),...(rN,cN)] to [(r1,r1,...rN),(c1,c2,...cN)]
+                        # Unzip coord list [(r1,c1),(r2,c2),...(rN,cN)] to [(r1,r1,...rN),(c1,c2,...cN)]
                         # Convert each tuple to set() to eliminate duplicates. If single element left then all were the same.
                         # Returns [True, False] if all ROW indexes match, [False, True] for Column
                         RowOrColmatch = [len(set(elem))==1 for elem in zip(*tmp_lst)]
 
                         if any(RowOrColmatch):
-                            if (0,0) not in confined_box_candidates[candidate]:                                  # if not set to be ignored
-                                confined_box_candidates[candidate] += [coord]                                    # good candidate, add coord to the list
+                            if (0,0) not in confined_box_candidates[candidate]["coordinates"]:                                  # if not set to be ignored
+                                confined_box_candidates[candidate]["coordinates"] += [coord]                                    # good candidate, add coord to the list
+                                confined_box_candidates[candidate]["matchBy"] = RowOrColmatch
                         else:
-                            confined_box_candidates[candidate] = [(0,0)]     # Ignore this canddate
+                            confined_box_candidates[candidate]["coordinates"] = [(0,0)]     # Ignore this canddate
+                            confined_box_candidates[candidate]["matchBy"] = [False,False]   # [Row,Col]
 
             # Remove all items containing (0,0)
-            confined_box_candidates = {key: value for (key, value) in confined_box_candidates.items() if (0, 0) not in value}
+            confined_box_candidates = {key: value for (key, value) in confined_box_candidates.items() if (0, 0) not in value["coordinates"]}
             print("DEBUG: Box %s confined_box_candidates: %s" % (box, confined_box_candidates))
 
-        print("End of function")
-            # ToDo: Use confined_box_candidates dict to elimnate candidate from the ROW or COL, depending in which was found
+            for candidate in confined_box_candidates:
+                if confined_box_candidates[candidate]["matchBy"][ROW]:
+                    cells = self.getHouseRow_coordinates(confined_box_candidates[candidate]["coordinates"][0])
+                elif confined_box_candidates[candidate]["matchBy"][COL]:
+                    cells = self.getHouseCol_coordinates(confined_box_candidates[candidate]["coordinates"][0])
+                else:
+                    continue
 
-            # example
-            #n = len([i for i, value in enumerate(boxRowCandidates) if value == candidate])   # how many found in the box row
-            #print("   Candidate %s found %s times" % (candidate, n))
+                # remove cells where confined candidate resides
+                cells = [elem for elem in cells if elem not in confined_box_candidates[candidate]["coordinates"]]
 
+                # remove confined candidate from other cells in the row or col
+                candidate_diff = []
+                for cell in cells:
+                    if self.board[cell[ROW]][cell[COL]].solved:
+                        continue
+                    new_candidates = [ elem for elem in self.board[cell[ROW]][cell[COL]].candidates if elem != candidate ]
+                    candidate_diff += list(set(self.board[cell[ROW]][cell[COL]].candidates) ^ set(new_candidates))
+                    self.board[cell[ROW]][cell[COL]].candidates = new_candidates
+                print("       removed candidates: %s" % (list(candidate_diff)))
+
+    def solveBy_LockedCandidatesType2(self):
+        # Locked Candidates Type 2 (Claiming)
+        #   If in a row (or column) all candidates of a certain digit are confined to one block,
+        #   that candidate can be eliminated from all other cells in that block.
+        pass
 
     def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
@@ -233,7 +261,7 @@ class Grid:
                     self.setCellCandidates(i,j) #candidates = self.getCandidates(i, j)
 
 
-    def RowHiddenSingleValue(self, row, col):                           # Checks if cell has Hidden Single candidate withint a Row
+    def RowHiddenSingleValue(self, row, col): # Checks if cell has Hidden Single candidate withint a Row
         HiddenSingle = 0
         row_candidates = []
         for candidate in self.board[row][col].candidates:               # iterate each candidate in specified cell
@@ -609,3 +637,7 @@ for k,v in mydict.items():
     |--- row: 1  col: 4
     |--- row: 3  col: 0
 '''  # example
+
+# example
+# n = len([i for i, value in enumerate(boxRowCandidates) if value == candidate])   # how many found in the box row
+# print("   Candidate %s found %s times" % (candidate, n))
