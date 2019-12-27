@@ -51,7 +51,6 @@ class Cell:
             for exception in exceptions:
                 self.exceptions.remove(exception)
 
-
 class Grid:
 
     def __init__(self, puzzle):
@@ -102,10 +101,8 @@ class Grid:
 
         # assemble list of candidates from the row,col(n)
         cand = [ self.board[cell.row][col].candidates for col in cols if len(self.board[cell.row][col].candidates)!=0]
-
-        cand = [item for items in cand for item in items]
+        cand = [item for items in cand for item in items]   # expand list into single list
         return cand
-
 
     def getBoxColCandidates(self, cell): # ToDo: Need to test
         ROW, COL  = 0, 1
@@ -114,8 +111,8 @@ class Grid:
 
         # assemble list of candidates from the row(n),col
         cand = [self.board[row][cell.col].candidates for row in rows if len(self.board[row][cell.col].candidates)!=0]
+        cand = [item for items in cand for item in items]  # expand list into single list
         return cand
-
 
     def solveBy_LockedCandidateType1(self):
         # Locked Candidates Type 1(Pointing)
@@ -144,7 +141,7 @@ class Grid:
 
                     for candidate in currentCell.candidates:                     # look for candidates that are confined to a row or column
 
-                        if candidate not in confined_box_candidates:             # if candidate is already in the list
+                        if candidate not in confined_box_candidates:             # if candidate is not already in the list
                             confined_box_candidates[candidate] = {}
                             confined_box_candidates[candidate]["coordinates"] = [coord]         # Add newly found to the list
                             confined_box_candidates[candidate]["matchBy"] = [False, False]
@@ -194,10 +191,90 @@ class Grid:
                 print("       removed candidates: %s" % (list(candidate_diff)))
 
     def solveBy_LockedCandidatesType2(self):
+        # ToDo: Work on LockedCandidatesType2
+
         # Locked Candidates Type 2 (Claiming)
-        #   If in a row (or column) all candidates of a certain digit are confined to one block,
-        #   that candidate can be eliminated from all other cells in that block.
-        pass
+        #   If in a row (or column) all candidates of a certain digit are confined to one box,
+        #   that candidate can be eliminated from all other cells in that box.
+
+        # Structure used to re-group find candidates that reside in the same row or col
+        # { candidate# :
+        #               {
+        #                   box         : []
+        #                   coordinates : [(x1,y1),(x1,y2])
+        #                   matchBy     : [False, True]      # [IsRow,IsCol]
+        #               }
+        # }
+
+        confined_box_candidates = {}
+
+        ROW, COL  = 0, 1
+
+        for i in range(0,9):
+            for j in range(0,9):
+
+                if self.board[i][j].solved:   # skip if solved
+                    continue
+
+                currentCell = self.board[i][j]
+
+                skip_candidate = False
+
+                # get next candidate
+                for candidate in currentCell.candidates:
+
+                    # Check all cells in the ROW
+                    for col in range(0,9):
+                        if col == j: # skip if it's the same cell
+                            continue
+
+                        if candidate in self.board[i][col].candidates:
+
+                            if self.board[i][j].solved:  # skip if solved
+                                continue
+
+                            if candidate not in confined_box_candidates:  # if candidate is not already in the list
+                                confined_box_candidates[candidate] = {}
+                                confined_box_candidates[candidate]["box"] = [self.board[i][col].box]
+                                confined_box_candidates[candidate]["coordinates"] = [(i,col)]
+                            else:
+                                if self.board[i][col].box not in confined_box_candidates[candidate]["box"]:
+                                    #skip_candidate = True                      # skip this candidate if it's in diff box
+                                    confined_box_candidates.pop(candidate)      # remove candidate from confined_box_candidates
+                                    break                                       # stop looping COL cells for this candidate
+                                else:                                           # add if its the same box
+                                    confined_box_candidates[candidate]["box"].append (self.board[i][col].box)
+                                    confined_box_candidates[candidate]["coordinates"].append((i,col))
+
+                    # Check all cells in the COL
+                    for row in range(0, 9):
+                        if row == i:  # skip if it's the same cell
+                            continue
+
+                        if candidate in self.board[row][j].candidates:
+
+                            if self.board[i][j].solved:  # skip if solved
+                                continue
+
+                            if candidate not in confined_box_candidates:  # if candidate is not already in the list
+                                confined_box_candidates[candidate] = {}
+                                confined_box_candidates[candidate]["box"] = [self.board[row][j].box]
+                                confined_box_candidates[candidate]["coordinates"] = [(row,j)]
+                            else:
+                                if self.board[row][j].box not in confined_box_candidates[candidate]["box"]:
+                                    #skip_candidate = True                      # skip this candidate if it's in diff box
+                                    confined_box_candidates.pop(candidate)      # remove candidate from confined_box_candidates
+                                    break                                       # stop looping cells for this candidate
+                                else:                                           # add if its the same box
+                                    confined_box_candidates[candidate]["box"].append (self.board[row][j].box)
+                                    confined_box_candidates[candidate]["coordinates"].append((row,j))
+
+        # DEBUG
+        print(confined_box_candidates)
+
+
+
+
 
     def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
@@ -246,7 +323,6 @@ class Grid:
         self.board[row][col].exceptions = exceptionList
         return exceptionList
 
-    #def getCandidates(self, row=0, col=0):
     def setCellCandidates(self, row=0, col=0):
         allNumbers =  [1, 2, 3, 4, 5, 6, 7, 8, 9]
         exceptionList = self.setCellExceptions(row, col)        # set and return cell exceptions
@@ -259,7 +335,6 @@ class Grid:
             for j in range (0,9):
                 if not self.board[i][j].solved:
                     self.setCellCandidates(i,j) #candidates = self.getCandidates(i, j)
-
 
     def RowHiddenSingleValue(self, row, col): # Checks if cell has Hidden Single candidate withint a Row
         HiddenSingle = 0
@@ -398,7 +473,6 @@ class Grid:
                 print(self.board[i][j].value, end = " "),
             print("")
         print("="*17)
-
 
     def isSolved(self):
         res = False
@@ -548,6 +622,8 @@ print("The End.")
 # ToDo: testing new function
 #a = myGame.grid.getBoxRowCandidates(myGame.grid.board[0][0])
 a = myGame.grid.solveBy_LockedCandidateType1()
+
+a = myGame.grid.solveBy_LockedCandidatesType2()
 print(a)
 
 
