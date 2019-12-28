@@ -206,22 +206,31 @@ class Grid:
         #               }
         # }
 
-        confined_box_candidates = {}
-
         ROW, COL  = 0, 1
 
+        final_res = {}
+        confined_box_candidates = {}
+
         for i in range(0,9):
-            for j in range(0,9):
+            for j in range(0,9):  # Debug
 
                 if self.board[i][j].solved:   # skip if solved
                     continue
 
                 currentCell = self.board[i][j]
 
-                skip_candidate = False
+                interrupted = False
 
                 # get next candidate
                 for candidate in currentCell.candidates:
+
+                    # save current candidate
+                    current_candidate = {}
+                    current_candidate[candidate] = {}
+                    current_candidate[candidate]["box"] = [currentCell.box]
+                    current_candidate[candidate]["coordinates"] = [(i,j)]
+
+                    confined_box_candidates = copy.deepcopy(current_candidate)
 
                     # Check all cells in the ROW
                     for col in range(0,9):
@@ -239,12 +248,25 @@ class Grid:
                                 confined_box_candidates[candidate]["coordinates"] = [(i,col)]
                             else:
                                 if self.board[i][col].box not in confined_box_candidates[candidate]["box"]:
-                                    #skip_candidate = True                      # skip this candidate if it's in diff box
-                                    confined_box_candidates.pop(candidate)      # remove candidate from confined_box_candidates
+                                    interrupted = True                          # skip COL search if box is different
+                                    confined_box_candidates = {} #copy.deepcopy(current_candidate)
                                     break                                       # stop looping COL cells for this candidate
                                 else:                                           # add if its the same box
-                                    confined_box_candidates[candidate]["box"].append (self.board[i][col].box)
                                     confined_box_candidates[candidate]["coordinates"].append((i,col))
+
+                    if not interrupted:  # not interrupted - same as found
+                        # ToDo:Remove candidate from all other cells in the box
+                        final_res.update(confined_box_candidates)  # temp
+                        continue        # so we could go to the next candidate
+
+
+                    # save current candidate
+                    current_candidate = {}
+                    current_candidate[candidate] = {}
+                    current_candidate[candidate]["box"] = [currentCell.box]
+                    current_candidate[candidate]["coordinates"] = [(i,j)]
+
+                    confined_box_candidates = copy.deepcopy(current_candidate)
 
                     # Check all cells in the COL
                     for row in range(0, 9):
@@ -262,12 +284,16 @@ class Grid:
                                 confined_box_candidates[candidate]["coordinates"] = [(row,j)]
                             else:
                                 if self.board[row][j].box not in confined_box_candidates[candidate]["box"]:
-                                    #skip_candidate = True                      # skip this candidate if it's in diff box
-                                    confined_box_candidates.pop(candidate)      # remove candidate from confined_box_candidates
+                                    interrupted = True                          # skip ROW search if box is different
+                                    confined_box_candidates = {} #copy.deepcopy(current_candidate)
                                     break                                       # stop looping cells for this candidate
                                 else:                                           # add if its the same box
-                                    confined_box_candidates[candidate]["box"].append (self.board[row][j].box)
                                     confined_box_candidates[candidate]["coordinates"].append((row,j))
+
+                    if not interrupted:  # not interrupted - same as found
+                        # ToDo:Remove candidate from all other cells in the box
+                        final_res.update(confined_box_candidates) # temp
+                        continue        # so we could go to the next candidate
 
         # DEBUG
         print(confined_box_candidates)
@@ -602,10 +628,39 @@ my_hudoku_game0 = [[1, 0, 0, 0, 0, 0, 0, 0, 7],
                    [7, 3, 0, 0 ,0, 0, 0, 9, 0],
                    [2, 0, 0, 0, 0, 0, 0, 0, 1]]
 
-my_puzzle =  my_hudoku_game0 #my_complex_01 #my_simple_01
+# Test game - LockedCandidatesType2 COL
+my_hudoku_game1 = [[0, 0, 0, 5, 0, 0, 0, 3, 0],
+                   [0, 2, 0, 0, 4, 3, 0, 0, 0],
+                   [0, 0, 0, 0, 0, 6, 2, 0, 9],
+                   [0, 8, 0, 3, 6, 0, 0, 0, 4],
+                   [0, 6 ,0 ,0, 7, 4, 0, 1, 0],
+                   [3, 0, 0, 0, 0, 1, 0, 6, 0],
+                   [9, 7, 8, 4, 0, 0, 0, 0, 0],
+                   [0, 0, 0, 1 ,9, 0, 0, 7, 0],
+                   [0, 5, 0, 6, 0, 7, 0, 0, 0]]
+
+# Test game - LockedCandidatesType2 ROW
+my_hudoku_game2 = [[0, 0, 0, 6, 5, 0, 3, 0, 8],
+                   [0, 0, 0, 0, 1, 9, 0, 5, 6],
+                   [5, 6, 0, 0, 0, 7, 0, 0, 9],
+                   [0, 5, 0, 9, 3, 0, 4, 0, 0],
+                   [2, 0, 1, 4, 6, 8, 5, 9, 0],
+                   [0, 0, 9, 0, 7, 5, 0, 8, 0],
+                   [3, 0, 5, 7, 0, 0, 0, 2, 4],
+                   [7, 8, 4, 5, 2, 0, 9, 0, 1],
+                   [0, 2, 6, 0, 0, 0, 0, 0, 5]]
+
+my_puzzle =  my_hudoku_game2 #my_complex_01 #my_simple_01
 
 myGame = SudokuGame(my_puzzle)                  # create puzzle
 myGame.grid.Show(message="Before")
+
+
+# ToDo: Test / Debug
+a = myGame.grid.solveBy_LockedCandidatesType2()
+print(a)
+
+
 
 time_start = time.time()                        # get current time
 solved = myGame.Solve()                         # solve puzzle
@@ -619,12 +674,10 @@ else:
 
 print("The End.")
 
-# ToDo: testing new function
+# ToDo: Add to production cycle
 #a = myGame.grid.getBoxRowCandidates(myGame.grid.board[0][0])
-a = myGame.grid.solveBy_LockedCandidateType1()
+#a = myGame.grid.solveBy_LockedCandidateType1()
 
-a = myGame.grid.solveBy_LockedCandidatesType2()
-print(a)
 
 
 # ToDo:
