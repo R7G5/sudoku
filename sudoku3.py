@@ -7,6 +7,7 @@ class Cell:
     def __init__(self, row, col, value=0):
         self.value  = value                 # current value
         self.solved = False                 # this cell is solved
+        self.given  = False                 # initial given
         self.exceptions = []                # list of values not allowed in cell due to position
         self.candidates = []                # list of possible values
         self.row = row
@@ -67,6 +68,41 @@ class Grid:
                 self.board[i][j].solved = puzzle[i][j] != 0     # Marked solved if not 0
         self.RecalculateAllCandidates()
 
+    # 6....23..1256.......47...2.73....84...........46....15.5...81.......3472..72....8
+    def setGivens(self,givens):
+        x = 0
+        for i in range(0,9):
+            for j in range(0,9):
+                self.board[i][j].value = givens[x]
+                self.board[i][j].given = True
+                x += 1
+
+    def getGivens(self):
+        res = ""
+        for i in range(0,9):
+            for j in range(0,9):
+                res += str(self.board[i][j].value) if self.board[i][j].value != 0 else "."
+        return res
+
+    ''' 
+    14689 168  2     3     5   67    4678  1478 14679 
+    13469 7    14569 2     8   6     456   145  14569 
+    689   568  5689  679   4   1     25678 3    25679 
+    2689  4    689   5679  269 2678  1     257  3     
+    7     126  169   14569 269 2346  2456  245  8     
+    5     1268 3     1467  26  24678 2467  9    2467  
+    12346 9    1456  8     7   246   2345  1245 1245  
+    1248  1258 14578 4     3   9     24578 6    12457 
+    23468 2368 4678  46    1   5     9     2478 247   
+    '''
+    def getCandidates(self):
+        pass
+        #ToDo: Write get candidate method
+
+
+
+
+
     def getHouseRow_coordinates(self, cell_coord):   # get list of house row coordinates
         return [ (cell_coord[0], clm) for clm in range(0, 9) ] # if clm !=cell.col ] # excluding current cell
 
@@ -116,8 +152,8 @@ class Grid:
 
     def solveBy_LockedCandidateType1(self):
         # Locked Candidates Type 1(Pointing)
-        #   If in a block all candidates of a certain digit are confined to a row or column,
-        #   that digit cannot appear outside of that block in that row or column.
+        #   If in a box all candidates of a certain digit are confined to a row or column,
+        #   that digit cannot appear outside of that box in that row or column.
 
         # Structure used to re-group find candidates that reside in the same row or col
         # { candidate# :
@@ -128,6 +164,7 @@ class Grid:
         # }
 
         ROW, COL  = 0, 1
+        changesMade = False
 
         for box in range(1,10):                             # for each box 1..9 (ignoring 0)
 
@@ -146,7 +183,7 @@ class Grid:
                             confined_box_candidates[candidate]["coordinates"] = [coord]         # Add newly found to the list
                             confined_box_candidates[candidate]["matchBy"] = [False, False]
                             continue
-                        elif (0,0) in confined_box_candidates[candidate]["coordinates"]:
+                        elif (-1,-1) in confined_box_candidates[candidate]["coordinates"]:
                             continue
 
                         tmp_lst = confined_box_candidates[candidate]["coordinates"].copy()   # copy candiata coordinates
@@ -158,15 +195,15 @@ class Grid:
                         RowOrColmatch = [len(set(elem))==1 for elem in zip(*tmp_lst)]
 
                         if any(RowOrColmatch):
-                            if (0,0) not in confined_box_candidates[candidate]["coordinates"]:                                  # if not set to be ignored
+                            if (-1, -1) not in confined_box_candidates[candidate]["coordinates"]:                                  # if not set to be ignored
                                 confined_box_candidates[candidate]["coordinates"] += [coord]                                    # good candidate, add coord to the list
                                 confined_box_candidates[candidate]["matchBy"] = RowOrColmatch
                         else:
-                            confined_box_candidates[candidate]["coordinates"] = [(0,0)]     # Ignore this canddate
+                            confined_box_candidates[candidate]["coordinates"] = [(-1,-1)]     # Ignore this canddate
                             confined_box_candidates[candidate]["matchBy"] = [False,False]   # [Row,Col]
 
             # Remove all items containing (0,0)
-            confined_box_candidates = {key: value for (key, value) in confined_box_candidates.items() if (0, 0) not in value["coordinates"]}
+            confined_box_candidates = {key: value for (key, value) in confined_box_candidates.items() if (-1, -1) not in value["coordinates"]}
             print("DEBUG: Box %s confined_box_candidates: %s" % (box, confined_box_candidates))
 
             for candidate in confined_box_candidates:
@@ -188,7 +225,12 @@ class Grid:
                     new_candidates = [ elem for elem in self.board[cell[ROW]][cell[COL]].candidates if elem != candidate ]
                     candidate_diff += list(set(self.board[cell[ROW]][cell[COL]].candidates) ^ set(new_candidates))
                     self.board[cell[ROW]][cell[COL]].candidates = new_candidates
+                    changesMade = True
                 print("       removed candidates: %s" % (list(candidate_diff)))
+
+        return changesMade
+
+
 
     def solveBy_LockedCandidatesType2(self):
         # ToDo: Work on LockedCandidatesType2
@@ -526,6 +568,8 @@ class Grid:
                 AllowedToRun =  (current != saved) #or (not self.isSolved())
                 saved = copy.deepcopy(current)
 
+
+
             AllowedToRun = True
             print(">>> Starting Hidden Single Candidate method...")
             while AllowedToRun:
@@ -533,6 +577,15 @@ class Grid:
                 self.Show()
                 AllowedToRun = (current != saved) #or (not self.isSolved())
                 saved = copy.deepcopy(current)
+
+            # if solveBy_LockedCandidateType1 made any changes repeate solving cycle
+            res = self.solveBy_LockedCandidateType1()
+            if res:
+                continue
+
+
+            # ToDo: Test / Debug
+            a = myGame.grid.solveBy_LockedCandidatesType2()
 
             solved = self.isSolved()                        # is it solved yet?
             current = self.getBoardSnapshot()                # set all single candidates and save array again
@@ -654,13 +707,6 @@ my_puzzle =  my_hudoku_game2 #my_complex_01 #my_simple_01
 
 myGame = SudokuGame(my_puzzle)                  # create puzzle
 myGame.grid.Show(message="Before")
-
-
-# ToDo: Test / Debug
-a = myGame.grid.solveBy_LockedCandidatesType2()
-print(a)
-
-
 
 time_start = time.time()                        # get current time
 solved = myGame.Solve()                         # solve puzzle
