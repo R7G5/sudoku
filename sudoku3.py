@@ -84,24 +84,16 @@ class Grid:
                 res += str(self.board[i][j].value) if self.board[i][j].value != 0 else "."
         return res
 
-    ''' 
-    14689 168  2     3     5   67    4678  1478 14679 
-    13469 7    14569 2     8   6     456   145  14569 
-    689   568  5689  679   4   1     25678 3    25679 
-    2689  4    689   5679  269 2678  1     257  3     
-    7     126  169   14569 269 2346  2456  245  8     
-    5     1268 3     1467  26  24678 2467  9    2467  
-    12346 9    1456  8     7   246   2345  1245 1245  
-    1248  1258 14578 4     3   9     24578 6    12457 
-    23468 2368 4678  46    1   5     9     2478 247   
-    '''
-    def getCandidates(self):
-        pass
-        #ToDo: Write get candidate method
-
-
-
-
+    def getCandidates(self): # ToDo: Added method grid.getCandidates
+        # Returns list of candidates in multi-row text foramat. Could be pasted in most sudoku apps
+        res = ""
+        for i in range(0,9):
+            for j in range(0,9):
+                cur = self.board[i][j].candidates if self.board[i][j].candidates else [self.board[i][j].value]
+                cur.sort()
+                res += "".join([str(elem) for elem in cur]) + " "
+            res += "\n"
+        return res
 
     def getHouseRow_coordinates(self, cell_coord):   # get list of house row coordinates
         return [ (cell_coord[0], clm) for clm in range(0, 9) ] # if clm !=cell.col ] # excluding current cell
@@ -225,7 +217,7 @@ class Grid:
                     new_candidates = [ elem for elem in self.board[cell[ROW]][cell[COL]].candidates if elem != candidate ]
                     candidate_diff += list(set(self.board[cell[ROW]][cell[COL]].candidates) ^ set(new_candidates))
                     self.board[cell[ROW]][cell[COL]].candidates = new_candidates
-                    changesMade = True
+                    changesMade = changesMade or candidate_diff != []    # if not equal empty list
                 print("       removed candidates: %s" % (list(candidate_diff)))
 
         return changesMade
