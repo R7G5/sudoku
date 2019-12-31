@@ -242,7 +242,8 @@ class Grid:
 
         ROW, COL  = 0, 1
 
-        final_res = {}
+        changesMade = False
+
         confined_box_candidates = {}
 
         for i in range(0,9):
@@ -290,8 +291,23 @@ class Grid:
 
                     if not interrupted:  # not interrupted - same as found
                         # ToDo:Remove candidate from all other cells in the box
-                        final_res.update(confined_box_candidates)  # temp
-                        continue        # so we could go to the next candidate
+
+                        coords = self.getHouseBox_coordinates(currentCell.box)  # get list of box cells
+
+                        for coord in coords:
+                            if coord in confined_box_candidates[candidate]['coordinates']:
+                                continue    # skip if original cell with candidate
+
+                            if self.board[coord[ROW]][coord[COL]].solved:
+                                continue    # skip if solved cell
+
+                            cell_candidates = set(self.board[coord[ROW]][coord[COL]].candidates)    # set of currnet cell candidates
+                            conf_candidates = confined_box_candidates.keys()                        # set of confined candidates
+
+                            if candidate in cell_candidates:
+                                self.board[coord[ROW]][coord[COL]].candidates = list(cell_candidates - conf_candidates)     # remove configned from cell candidates
+                                changesMade = changesMade or True
+                        continue        # go to the next candidate
 
 
                     # save current candidate
@@ -326,15 +342,29 @@ class Grid:
 
                     if not interrupted:  # not interrupted - same as found
                         # ToDo:Remove candidate from all other cells in the box
-                        final_res.update(confined_box_candidates) # temp
-                        continue        # so we could go to the next candidate
+
+                        coords = self.getHouseBox_coordinates(currentCell.box)  # get list of box cells
+
+                        for coord in coords:
+                            if coord in confined_box_candidates[candidate]['coordinates']:
+                                continue    # skip if original cell with candidate
+
+                            if self.board[coord[ROW]][coord[COL]].solved:
+                                continue    # skip if solved cell
+
+                            cell_candidates = set(self.board[coord[ROW]][coord[COL]].candidates)    # set of currnet cell candidates
+                            conf_candidates = confined_box_candidates.keys()                        # set of confined candidates
+
+                            if candidate in cell_candidates:
+                                self.board[coord[ROW]][coord[COL]].candidates = list(cell_candidates - conf_candidates)     # remove configned from cell candidates
+                                changesMade = changesMade or True
+                        continue        # go to the next candidate
 
         # DEBUG
         print(confined_box_candidates)
+        return changesMade
 
-
-
-
+        #ToDo: DEBUG: Did not find candidate 7 in box #6
 
     def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
@@ -577,7 +607,9 @@ class Grid:
 
 
             # ToDo: Test / Debug
-            a = myGame.grid.solveBy_LockedCandidatesType2()
+            res = myGame.grid.solveBy_LockedCandidatesType2()
+            if res:
+                continue
 
             solved = self.isSolved()                        # is it solved yet?
             current = self.getBoardSnapshot()                # set all single candidates and save array again
