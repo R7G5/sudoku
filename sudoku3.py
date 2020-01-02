@@ -84,7 +84,7 @@ class Grid:
                 res += str(self.board[i][j].value) if self.board[i][j].value != 0 else "."
         return res
 
-    def getCandidates(self): # ToDo: Added method grid.getCandidates
+    def getCandidates(self):
         # Returns list of candidates in multi-row text foramat. Could be pasted in most sudoku apps
         res = ""
         for i in range(0,9):
@@ -122,7 +122,7 @@ class Grid:
         return [(r, c) for r in rows for c in cols]
         #[(x,c) for x in range(0,5) if x !=3 for c in range(0,5) if c !=3]
 
-    def getBoxRowCandidates(self, cell): # ToDo: Need to test
+    def getBoxRowCandidates(self, cell):
         ROW, COL  = 0, 1
         houseCoords = self.getHouseBox_coordinates(cell.box)      # get list cell coordinates of the box
         cols = [coord[COL] for coord in houseCoords if coord[ROW] == cell.row]  # extract column numbers
@@ -132,7 +132,7 @@ class Grid:
         cand = [item for items in cand for item in items]   # expand list into single list
         return cand
 
-    def getBoxColCandidates(self, cell): # ToDo: Need to test
+    def getBoxColCandidates(self, cell):
         ROW, COL  = 0, 1
         houseCoords = self.getHouseBox_coordinates(cell.box)      # get list cell coordinates of the box
         rows = [coord[ROW] for coord in houseCoords if coord[COL] == cell.col]  # extract row numbers
@@ -225,7 +225,6 @@ class Grid:
 
 
     def solveBy_LockedCandidatesType2(self):
-        # ToDo: Work on LockedCandidatesType2
 
         # Locked Candidates Type 2 (Claiming)
         #   If in a row (or column) all candidates of a certain digit are confined to one box,
@@ -244,20 +243,15 @@ class Grid:
 
         changesMade = False
 
-        confined_box_candidates = {}
-
         for i in range(0,9):
-            for j in range(0,9):  # Debug
+            for j in range(0,9):
 
                 if self.board[i][j].solved:   # skip if solved
                     continue
 
                 currentCell = self.board[i][j]
 
-                interrupted = False
-
-                # get next candidate
-                for candidate in currentCell.candidates:
+                for candidate in currentCell.candidates:    # get next candidate
 
                     # save current candidate
                     current_candidate = {}
@@ -289,8 +283,7 @@ class Grid:
                                 else:                                           # add if its the same box
                                     confined_box_candidates[candidate]["coordinates"].append((i,col))
 
-                    if not interrupted:  # not interrupted - same as found
-                        # ToDo:Remove candidate from all other cells in the box
+                    if confined_box_candidates: # if found
 
                         coords = self.getHouseBox_coordinates(currentCell.box)  # get list of box cells
 
@@ -340,8 +333,8 @@ class Grid:
                                 else:                                           # add if its the same box
                                     confined_box_candidates[candidate]["coordinates"].append((row,j))
 
-                    if not interrupted:  # not interrupted - same as found
-                        # ToDo:Remove candidate from all other cells in the box
+                    if confined_box_candidates: # if found
+                        # Remove candidate from all other cells in the box
 
                         coords = self.getHouseBox_coordinates(currentCell.box)  # get list of box cells
 
@@ -360,11 +353,7 @@ class Grid:
                                 changesMade = changesMade or True
                         continue        # go to the next candidate
 
-        # DEBUG
-        print(confined_box_candidates)
         return changesMade
-
-        #ToDo: DEBUG: Did not find candidate 7 in box #6
 
     def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
@@ -591,7 +580,6 @@ class Grid:
                 saved = copy.deepcopy(current)
 
 
-
             AllowedToRun = True
             print(">>> Starting Hidden Single Candidate method...")
             while AllowedToRun:
@@ -605,8 +593,6 @@ class Grid:
             if res:
                 continue
 
-
-            # ToDo: Test / Debug
             res = myGame.grid.solveBy_LockedCandidatesType2()
             if res:
                 continue
@@ -744,23 +730,6 @@ else:
 
 print("The End.")
 
-# ToDo: Add to production cycle
-#a = myGame.grid.getBoxRowCandidates(myGame.grid.board[0][0])
-#a = myGame.grid.solveBy_LockedCandidateType1()
-
-
-
-# ToDo:
-#
-#   Committed:
-#   [X] Create twinList - list of identical possibilities for the board
-#   [X] fix issue: remove twinList items where list of coordinates in the value is shorter than 2 items
-#   [X] Sort twinList dictionary by the length of the key - shortest number of possibilities
-#   [X] Rename method from getBlock to getBoxValues
-#   [X] Rename Cell.possibilities attribute to Cell.candidates
-#   [X] Rename object and variables from Puzzle/puzzle to Grid
-#   [X] Rename Grid.SetAllSiglePossibilities method to Grid.SetAllSingleCandidates
-
 
 # Links:
 #   Sudoku methods
@@ -768,75 +737,3 @@ print("The End.")
 #
 # currently solves simple puzzles
 # need to explore more options
-
-'''
-# Populates attribute twinList with identical possibiities
-def setTwinList(self):
-    self.twinList = {}  # clear existing data
-
-    for i in range(0, 9):
-        for j in range (0,9):
-            if not self.board[i][j].solved:
-                tpl = tuple(sorted(self.board[i][j].candidates))     # get list of current possibilities
-                if tpl not in self.twinList.keys():                         # if does not exist
-                    self.twinList[tpl] = []                                 # create one
-                self.twinList[tpl].append((i,j))                            # add (row,col) tuple to the list
-
-    self.twinList = dict(filter(lambda item: len(item[1]) > 1, self.twinList.items()))  # only keep items with two or more cell coordinates
-    self.twinList = sorted(self.twinList.items(), key=lambda item: len(item[0]))         # sort by length of possibility list
-#return ?
-'''
-''' from SudokuGame.Solve
-while not self.grid.isSolved():   # or self.grid[i].solved
-    self.grid.setTwinList()
-
-    for key, value in self.grid.twinList:   # iterate key (possible numbers) and values cell coordinates
-        for possibility in key:                  # iterate through all possible numbers in the key
-            print("==>Exporing Possibility: %s" % (possibility))
-            for row, col in value:               # iterate through all coordinates in value
-
-                print("Possible # = %s   Coord:(%s,%s)" % (possibility, row, col))
-
-                cur_board = copy.deepcopy(self.grid.CurrentBoard)   # make array copy of existing board
-                cur_board[row][col] = possibility                     # replace cell with possibility
-                tmp_game = SudokuGame(cur_board)                      # create new SudokuGame object
-                tmp_game.Solve()                                      # try to solve it
-
-                if tmp_game.solved:                                   # if solved: exit
-                    self.grid.moves += tmp_game.grid.moves
-                    print("Line 206: Grid solved!!!")
-                    self.solved = True
-                    return self.solved
-'''
-
-'''
-for k,v in mydict.items():
-	print(k,"=",v)
-	for possibility in k:
-		print(" |-",possibility)
-		for row,col in v:
-			print("    |--- row:",row," col:",col)
-
-
-(2, 4, 7) = [(0, 1), (0, 7)]
- |- 2
-    |--- row: 0  col: 1
-    |--- row: 0  col: 7
- |- 4
-    |--- row: 0  col: 1
-    |--- row: 0  col: 7
- |- 7
-    |--- row: 0  col: 1
-    |--- row: 0  col: 7
-(5, 8) = [(1, 4), (3, 0)]
- |- 5
-    |--- row: 1  col: 4
-    |--- row: 3  col: 0
- |- 8
-    |--- row: 1  col: 4
-    |--- row: 3  col: 0
-'''  # example
-
-# example
-# n = len([i for i, value in enumerate(boxRowCandidates) if value == candidate])   # how many found in the box row
-# print("   Candidate %s found %s times" % (candidate, n))
