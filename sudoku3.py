@@ -1,6 +1,7 @@
 import time
 import copy
 #import sys
+import itertools
 
 class Cell:
 
@@ -68,8 +69,8 @@ class Grid:
                 self.board[i][j].solved = puzzle[i][j] != 0     # Marked solved if not 0
         self.RecalculateAllCandidates()
 
-    # 6....23..1256.......47...2.73....84...........46....15.5...81.......3472..72....8
     def setGivens(self,givens):
+        # Sample format: 6....23..1256.......47...2.73....84...........46....15.5...81.......3472..72....8
         x = 0
         for i in range(0,9):
             for j in range(0,9):
@@ -78,24 +79,15 @@ class Grid:
                 x += 1
 
     def getGivens(self):
+        # Sample format:  6....23..1256.......47...2.73....84...........46....15.5...81.......3472..72....8
         res = ""
         for i in range(0,9):
             for j in range(0,9):
                 res += str(self.board[i][j].value) if self.board[i][j].value != 0 else "."
         return res
 
-    def getCandidates(self):
-        # Returns list of candidates in multi-row text foramat. Could be pasted in most sudoku apps
-        res = ""
-        for i in range(0,9):
-            for j in range(0,9):
-                cur = self.board[i][j].candidates if self.board[i][j].candidates else [self.board[i][j].value]
-                cur.sort()
-                res += "".join([str(elem) for elem in cur]) + " "
-            res += "\n"
-        return res
-
-    def getHouseRow_coordinates(self, cell_coord):   # get list of house row coordinates
+    # Coordinates method
+    def getHouseRow_coordinates(self, cell_coord):   # get list of house row coordinates. param (r,c)
         return [ (cell_coord[0], clm) for clm in range(0, 9) ] # if clm !=cell.col ] # excluding current cell
 
     def getHouseCol_coordinates(self, cell_coord):   # get list of house col coordinates
@@ -122,6 +114,18 @@ class Grid:
         return [(r, c) for r in rows for c in cols]
         #[(x,c) for x in range(0,5) if x !=3 for c in range(0,5) if c !=3]
 
+    # Candidate methods
+    def getAllCandidates(self):
+        # Returns list of candidates in multi-row text foramat. Could be pasted in most sudoku apps
+        res = ""
+        for i in range(0,9):
+            for j in range(0,9):
+                cur = self.board[i][j].candidates if self.board[i][j].candidates else [self.board[i][j].value]
+                cur.sort()
+                res += "".join([str(elem) for elem in cur]) + " "
+            res += "\n"
+        return res
+
     def getBoxRowCandidates(self, cell):
         ROW, COL  = 0, 1
         houseCoords = self.getHouseBox_coordinates(cell.box)      # get list cell coordinates of the box
@@ -142,6 +146,7 @@ class Grid:
         cand = [item for items in cand for item in items]  # expand list into single list
         return cand
 
+    # Solve methods
     def solveBy_LockedCandidateType1(self):
         # Locked Candidates Type 1(Pointing)
         #   If in a box all candidates of a certain digit are confined to a row or column,
@@ -221,8 +226,6 @@ class Grid:
                 print("       removed candidates: %s" % (list(candidate_diff)))
 
         return changesMade
-
-
 
     def solveBy_LockedCandidatesType2(self):
 
@@ -355,6 +358,100 @@ class Grid:
 
         return changesMade
 
+    def solveBy_NakedTriple(self):  # ToDo: Work on Grid.solveBy_NakedTriple method
+
+        """
+         If you can find three cells, all in the same house, that have only the same three candidates left,
+         you can eliminate that candidates from all other cells in that house. It is important to note
+         that not all cells must contain all three candidates, but there must not be more than three
+         candidates in the three cells all together.
+         Ref: http://hodoku.sourceforge.net/en/tech_naked.php#n3
+
+         Example:
+
+           General rules:
+           - Ignore all cells with more than 3 candidates
+           - There should be only three cells
+           - Cells should have same 3 candidates
+           - Not all of 3 cells must have all candidates
+
+           Method:
+            Building table of house candidates. Then verifying each triplet of candidates using following rule
+            Each triplet member must share cell with two other members. The end cell list must have 3 unique cells.
+
+            candidate_matrix:
+            1 : (0,0) (0,1)
+            2 :             (0,2) (0,5)
+            4 :                   (0,5) (0,7)
+            7 :       (0,1) (0,2)       (0,7)
+            9 : (0,0) (0,1)
+
+            candidate_final:
+            (1,2,4)                         (1,7,9)                        (2,4,7)
+            1 & 2 share 0 cells             1 & 7 share (0,1)               2 & 4 share (0,5)
+            1 & 4 share 0 cells             1 & 9 share (0,0) (0,1)         2 & 7 share (0,2)
+            2 & 4 share (0,5)               7 & 9 share (0,1)               4 & 7 share (0,7)
+            Total unique shared cells       Total unique shared cells 2     Total unique shared cells 3
+            across this triplet is 1        (0,0) & (0,1).
+            It is less that required 3      It is less that required 3      This tripled meets requirement!
+            Discard triplet                 Discard triplet                 Keep triplet
+        """
+
+        ROW, COL = 0, 1  # row and col corrdinate positions for better code readability
+
+        # ToDo: Loop through each cell and check each house cell belonws too (Row,Col,Box)
+
+        coords = self.getHouseRow_coordinates((0,0))  # get list of House-Row coordinates
+
+        all_candidates = []     # list of all house cell candidates
+        candidate_matrix = {}   # matrix of eligible candidates and cells
+        candidate_final = {}    # final list for NakedTriple
+
+        for coord in coords:   # iterate each house coordinate
+            if 0 < len(self.board[coord[ROW]][coord[COL]].candidates) <=3:          # allow cells with 2 or 3 candidates
+                currnet_candidates = self.board[coord[ROW]][coord[COL]].candidates  # read current candidates
+                all_candidates.append(currnet_candidates)                           # add to the list of all candidates
+
+                for cand in currnet_candidates:                 # iterate all current candidates
+                    if (cand not in candidate_matrix.keys()):   # and build candidate_matrix
+                        candidate_matrix[cand] = []
+                    candidate_matrix[cand].append(coord)
+
+        all_candidates = [item for items in all_candidates for item in items] # [[1,2],[3,4]]=[1,2,3,4] make a flat list
+        unique_candidates = list(set(all_candidates))                         # keep only unique numbers
+
+        for current_triple in itertools.combinations(unique_candidates, 3):  # iterate by triples (1, 7, 9),...
+            for pair in itertools.combinations(current_triple, 2):           #  iterate by pairs (1, 7),(1, 9),(7, 9)
+
+                a = candidate_matrix[pair[0]]    # read first pair member
+                b = candidate_matrix[pair[1]]    # read second pair member
+
+                res = list(set(a) & set(b))  # is there common cell?
+                if (not res):
+                    break   # if no common cells then break and skip to next triple
+                else:       # if there are a common cells
+                    if (current_triple not in candidate_final.keys()):   # if not in the dictionary yet
+                        candidate_final[current_triple] = []             # add key and empty list value
+                    candidate_final[current_triple].append(res)          # append to the final list for now
+
+            if current_triple in candidate_final.keys():    # if key exists
+                candidate_final[current_triple] = [item for items in candidate_final[current_triple] for item in items]   # make list flat
+                if len(set(candidate_final[current_triple])) < 3:  # are there less than 3 cells?
+                    candidate_final.pop(current_triple, "")   # remove triple
+
+        for cand in candidate_final:                                  # iterare all house coordinates
+            coords = list(set(coords) - set(candidate_final[cand]))   # only keep cells that are not in candidate_final
+
+        for coord in coords:                                          # iterate remaining candidates
+            for triplet in candidate_final:                           # iterate all triplets
+                # Remove candidates that are in candidate_final.keys()
+                self.board[coord[ROW]][coord[COL]].candidates = \
+                    list(set(self.board[coord[ROW]][coord[COL]].candidates) - set(triplet))
+
+
+
+        return False
+
     def getBoardSnapshot(self):  # returns an array copy of the grid
         tmp = copy.deepcopy(self.CurrentBoard)
         return tmp
@@ -406,6 +503,7 @@ class Grid:
         allNumbers =  [1, 2, 3, 4, 5, 6, 7, 8, 9]
         exceptionList = self.setCellExceptions(row, col)        # set and return cell exceptions
         candidateList = list(set(allNumbers) - set(exceptionList))
+        candidateList.sort()
         self.board[row][col].candidates = candidateList
         return candidateList       # list of numbers not in exception list
 
@@ -596,6 +694,8 @@ class Grid:
             res = myGame.grid.solveBy_LockedCandidatesType2()
             if res:
                 continue
+
+            res = myGame.grid.solveBy_NakedTriple()
 
             solved = self.isSolved()                        # is it solved yet?
             current = self.getBoardSnapshot()                # set all single candidates and save array again
